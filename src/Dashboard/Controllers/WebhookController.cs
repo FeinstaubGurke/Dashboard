@@ -1,4 +1,4 @@
-using Dashboard.Models;
+using Dashboard.Models.Webhooks;
 using Dashboard.Services;
 using Microsoft.AspNetCore.Mvc;
 

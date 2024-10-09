@@ -1,4 +1,3 @@
-using Dashboard.Models;
 using Dashboard.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,7 +22,7 @@ namespace Dashboard.Controllers
         [Route("")]
         public ActionResult Sensors()
         {
-            return StatusCode(StatusCodes.Status200OK, string.Join(",", this._sensorStatusService.GetSensors()));
+            return StatusCode(StatusCodes.Status200OK, this._sensorStatusService.GetSensors());
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Dashboard.Models
+﻿namespace Dashboard.Models.Webhooks
 {
     public class UplinkMessage
     {
