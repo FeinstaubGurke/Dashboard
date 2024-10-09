@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 
 namespace Dashboard.Services
 {
-    public class SensorStatusService
+    public class SensorService
     {
         private readonly ConcurrentDictionary<string, Sensor> _sensors = new ConcurrentDictionary<string, Sensor>();
 
-        public SensorStatusService() { }
+        public SensorService() { }
 
         public void SetTryJoin(string sensorId)
         {

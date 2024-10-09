@@ -8,21 +8,21 @@ namespace Dashboard.Controllers
     public class SensorController : ControllerBase
     {
         private readonly ILogger<SensorController> _logger;
-        private readonly SensorStatusService _sensorStatusService;
+        private readonly SensorService _sensorService;
 
         public SensorController(
             ILogger<SensorController> logger,
-            SensorStatusService sensorStatusService)
+            SensorService sensorService)
         {
             this._logger = logger;
-            this._sensorStatusService = sensorStatusService;
+            this._sensorService = sensorService;
         }
 
         [HttpGet]
         [Route("")]
         public ActionResult Sensors()
         {
-            return StatusCode(StatusCodes.Status200OK, this._sensorStatusService.GetSensors());
+            return StatusCode(StatusCodes.Status200OK, this._sensorService.GetSensors());
         }
     }
 }

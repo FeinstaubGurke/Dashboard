@@ -9,14 +9,14 @@ namespace Dashboard.Controllers
     public class WebhookController : ControllerBase
     {
         private readonly ILogger<WebhookController> _logger;
-        private readonly SensorStatusService _sensorStatusService;
+        private readonly SensorService _sensorService;
 
         public WebhookController(
             ILogger<WebhookController> logger,
-            SensorStatusService sensorStatusService)
+            SensorService sensorService)
         {
             this._logger = logger;
-            this._sensorStatusService = sensorStatusService;
+            this._sensorService = sensorService;
         }
 
         [HttpPost]
@@ -25,7 +25,7 @@ namespace Dashboard.Controllers
         {
             this._logger.LogInformation($"JoinAccept - {webhook.EndDeviceIds.DeviceId}");
 
-            this._sensorStatusService.SetTryJoin(webhook.EndDeviceIds.DeviceId);
+            this._sensorService.SetTryJoin(webhook.EndDeviceIds.DeviceId);
 
             return StatusCode(StatusCodes.Status204NoContent);
         }
@@ -36,7 +36,7 @@ namespace Dashboard.Controllers
         {
             this._logger.LogInformation($"UplinkMessage - {webhook.EndDeviceIds.DeviceId} Sensormodus:{webhook.UplinkMessage.DecodedPayload.Decoded.Sensormodus} TxReason:{webhook.UplinkMessage.DecodedPayload.Decoded.TxReason}");
 
-            this._sensorStatusService.UpdateStatus(webhook.EndDeviceIds.DeviceId, webhook.UplinkMessage.DecodedPayload.Decoded.TxReason);
+            this._sensorService.UpdateStatus(webhook.EndDeviceIds.DeviceId, webhook.UplinkMessage.DecodedPayload.Decoded.TxReason);
 
             return StatusCode(StatusCodes.Status204NoContent);
         }
