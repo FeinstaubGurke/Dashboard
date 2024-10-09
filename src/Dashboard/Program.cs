@@ -1,4 +1,3 @@
-using Dashboard.ActionFilters;
 using Dashboard.Services;
 
 var builder = WebApplication.CreateBuilder(args);
