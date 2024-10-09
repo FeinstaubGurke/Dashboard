@@ -18,7 +18,7 @@ namespace Dashboard.Controllers
         [Route("JoinAccept")]
         public ActionResult JoinAccept(JoinAcceptWebhook joinAcceptWebhook)
         {
-            this._logger.LogInformation("JoinAccept");
+            this._logger.LogInformation($"JoinAccept - {joinAcceptWebhook.EndDeviceIds.DeviceId}");
 
             return StatusCode(StatusCodes.Status204NoContent);
         }
@@ -27,7 +27,7 @@ namespace Dashboard.Controllers
         [Route("UplinkMessage")]
         public ActionResult UplinkMessage(UplinkMessageWebhook uplinkMessageWebhook)
         {
-            this._logger.LogInformation("UplinkMessage");
+            this._logger.LogInformation($"UplinkMessage - {uplinkMessageWebhook.EndDeviceIds.DeviceId}");
 
             return StatusCode(StatusCodes.Status204NoContent);
         }

@@ -2,7 +2,7 @@
 {
     public class JoinAccept
     {
-        public string session_key_id { get; set; }
-        public string received_at { get; set; }
+        public string SessionKeyId { get; set; }
+        public string ReceivedAt { get; set; }
     }
 }

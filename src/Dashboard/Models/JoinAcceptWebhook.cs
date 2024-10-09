@@ -1,10 +1,7 @@
 ﻿namespace Dashboard.Models
 {
-    public class JoinAcceptWebhook
+    public class JoinAcceptWebhook : WebhookBase
     {
-        public EndDeviceIds EndDeviceIds { get; set; }
-        public string[] CorrelationIds { get; set; }
-        public string ReceivedAt { get; set; }
         public JoinAccept JoinAccept { get; set; }
     }
 }
