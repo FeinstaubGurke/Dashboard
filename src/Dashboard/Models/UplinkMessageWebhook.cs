@@ -69,16 +69,16 @@
 
     public class RxMetadata
     {
-        public GatewayIds gateway_ids { get; set; }
-        public object time { get; set; }
-        public long timestamp { get; set; }
-        public int rssi { get; set; }
-        public int channel_rssi { get; set; }
-        public float snr { get; set; }
-        public Location location { get; set; }
-        public string uplink_token { get; set; }
-        public int channel_index { get; set; }
-        public string received_at { get; set; }
+        public GatewayIds GatewayIds { get; set; }
+        public DateTime? Time { get; set; }
+        public long Timestamp { get; set; }
+        public int Rssi { get; set; }
+        public int ChannelRssi { get; set; }
+        public float Snr { get; set; }
+        public Location Location { get; set; }
+        public string UplinkToken { get; set; }
+        public int ChannelIndex { get; set; }
+        public string ReceivedAt { get; set; }
     }
 
     public class GatewayIds
