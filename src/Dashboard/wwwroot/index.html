@@ -61,7 +61,7 @@
         <div v-if="sensors" style="display: flex; padding:10px;">
             <div v-for="item in sensors" :key="item.deviceId" class="sensorbox">
                 <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
-                    {{ getSensorName(item.device_id) }}<br />
+                    <strong>{{ getSensorName(item.device_id) }}</strong><br />
                     Status: {{ item.status }}<br />
                     {{ new Date(item.last_signal_received_time).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
                 </div>
@@ -91,11 +91,12 @@
 
                 const getSensorName = (deviceId) => {
                     const deviceNames = {
-                        "eui-7066e1fffe0112ae": "FGXX",
-                        "eui-7066e1fffe0112ce": "FGXX",
-                        "eui-7066e1fffe011224": "FGXX",
-                        "eui-7066e1fffe01121e": "FGXX",
-                        "eui-7066e1fffe0112ac": "FG06"
+                        "eui-7066e1fffe0112ce": "Sensor FG01",
+                        "eui-7066e1fffe0112ae": "Sensor FG02",
+                        "eui-7066e1fffe01121e": "Sensor FG03",
+                        "eui-7066e1fffe0112d2": "Sensor FG04",
+                        "eui-7066e1fffe011224": "Sensor FG05",
+                        "eui-7066e1fffe0112ac": "Sensor FG06"
                     };
 
                     return deviceNames[deviceId] || "Unbekannt";
