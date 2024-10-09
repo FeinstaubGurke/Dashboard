@@ -63,7 +63,7 @@
                 <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
                     {{ item.name }}<br />
                     {{ item.status }}<br />
-                    {{ item.last_signal_received_time }}
+                    {{ new Date(item.last_signal_received_time).getFullYear() }}
                 </div>
             </div>
         </div>
