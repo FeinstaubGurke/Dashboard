@@ -1,3 +1,4 @@
+using Dashboard.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Dashboard.Controllers
@@ -13,10 +14,24 @@ namespace Dashboard.Controllers
             this._logger = logger;
         }
 
-        [HttpGet]
-        public ActionResult Get()
+        [HttpPost]
+        [Route("JoinAccept")]
+        public ActionResult JoinAccept(JoinAcceptWebhook joinAcceptWebhook)
         {
+            this._logger.LogInformation("JoinAccept");
+
             return StatusCode(StatusCodes.Status204NoContent);
+        }
+
+        [HttpPost]
+        [Route("UplinkMessage")]
+        public ActionResult UplinkMessage(UplinkMessageWebhook uplinkMessageWebhook)
+        {
+            {
+                this._logger.LogInformation("UplinkMessage");
+
+                return StatusCode(StatusCodes.Status204NoContent);
+            }
         }
     }
 }
