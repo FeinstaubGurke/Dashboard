@@ -63,7 +63,8 @@
                 <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
                     {{ item.name }}<br />
                     {{ item.status }}<br />
-                    {{ new Date(item.last_signal_received_time).getFullYear() }}
+                    {{ new Date(item.last_signal_received_time)..toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                    }}
                 </div>
             </div>
         </div>
