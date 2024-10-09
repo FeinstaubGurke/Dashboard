@@ -61,7 +61,7 @@
         <div v-if="sensors" style="display: flex; padding:10px;">
             <div v-for="item in sensors" :key="item.deviceId" class="sensorbox">
                 <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
-                    {{ getSensorName(item.deviceId) }}<br />
+                    {{ getSensorName(item.device_id) }}<br />
                     Status: {{ item.status }}<br />
                     {{ new Date(item.last_signal_received_time).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
                 </div>
