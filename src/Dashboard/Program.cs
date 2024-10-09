@@ -7,7 +7,7 @@ builder.Services.AddSingleton<SensorStatusService>();
 
 builder.Services.AddControllers().AddJsonOptions(configure =>
 {
-    configure.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
+    //configure.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
