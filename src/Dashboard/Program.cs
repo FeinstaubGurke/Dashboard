@@ -3,7 +3,7 @@ using Dashboard.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddSingleton<SensorStatusService>();
+builder.Services.AddSingleton<SensorService>();
 
 builder.Services.AddControllers().AddJsonOptions(configure =>
 {
