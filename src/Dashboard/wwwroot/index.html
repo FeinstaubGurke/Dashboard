@@ -30,6 +30,13 @@
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: 1.4rem;
         }
+
+        .sensorbox {
+            background-color: #DBF227;
+            width: 300px;
+            height: 200px;
+            margin-right: 20px;
+        }
     </style>
 </head>
 <body>
@@ -41,11 +48,13 @@
 
 
     <div id="app" style="display: flex;">
-        <div v-for="item in data" :key="item.name" style="background-color: #DBF227; width:300px; height:200px; margin-right:20px;">
-            {{ item.name }}<br />
-            {{ item.isReady }}<br />
-            {{ item.status }}<br />
-            {{ item.lastSignalReceivedTime }}
+        <div v-for="item in data" :key="item.name" class="sensorbox">
+            <div style="padding:20px;">
+                {{ item.name }}<br />
+                {{ item.isReady }}<br />
+                {{ item.status }}<br />
+                {{ item.lastSignalReceivedTime }}
+            </div>
         </div>
     </div>
 
