@@ -58,7 +58,7 @@
 
 
     <div id="app">
-        <div v-if="data" style="display: flex; padding:10px;">
+        <div v-if="sensors" style="display: flex; padding:10px;">
             <div v-for="item in sensors" :key="item.name" class="sensorbox">
                 <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
                     {{ item.name }}<br />
