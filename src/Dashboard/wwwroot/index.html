@@ -36,6 +36,8 @@
             width: 300px;
             height: 200px;
             margin-right: 20px;
+            font-family: 'Poppins', Arial, Verdana, sans-serif;
+            font-size: 1.4rem;
         }
     </style>
 </head>
@@ -49,7 +51,7 @@
 
     <div id="app">
         <div v-if="data" style="display: flex; padding:10px;">
-            <div v-for="item in data" :key="item.name" class="sensorbox">
+            <div v-for="item in sensors" :key="item.name" class="sensorbox">
                 <div style="padding:20px;">
                     {{ item.name }}<br />
                     {{ item.is_ready }}<br />
@@ -65,7 +67,7 @@
 
         createApp({
             setup() {
-                const data = ref('Hello vue!');
+                const sensors = ref(undefined);
                 const error = ref(null);
 
                 const fetchData = async () => {
@@ -74,7 +76,7 @@
                         if (!response.ok) {
                             throw new Error('Network response was not ok');
                         }
-                        data.value = await response.json();
+                        sensors.value = await response.json();
                     } catch (err) {
                         error.value = err.message;
                     }
@@ -85,7 +87,7 @@
                 });
 
                 return {
-                    data
+                    sensors
                 }
             }
         }).mount('#app')
