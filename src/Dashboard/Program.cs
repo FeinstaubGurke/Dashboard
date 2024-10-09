@@ -1,11 +1,16 @@
+using Dashboard.ActionFilters;
 using Dashboard.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddSingleton<SensorStatusService>();
 
-builder.Services.AddControllers().AddJsonOptions(configure =>
+builder.Services.AddControllers(configure =>
+{
+    configure.Filters.Add<CustomJsonNamingPolicyFilter>();
+}).AddJsonOptions(configure =>
 {
     //configure.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
 });
