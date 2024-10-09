@@ -1,18 +1,14 @@
 using Dashboard.ActionFilters;
 using Dashboard.Services;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddSingleton<SensorStatusService>();
 
-builder.Services.AddControllers(configure =>
+builder.Services.AddControllers().AddJsonOptions(configure =>
 {
-    configure.Filters.Add<CustomJsonNamingPolicyFilter>();
-}).AddJsonOptions(configure =>
-{
-    //configure.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
+    configure.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

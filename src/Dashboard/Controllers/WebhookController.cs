@@ -1,4 +1,3 @@
-using Dashboard.ActionFilters;
 using Dashboard.Models.Webhooks;
 using Dashboard.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +6,6 @@ namespace Dashboard.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    [ServiceFilter(typeof(CustomJsonNamingPolicyFilter))]
     public class WebhookController : ControllerBase
     {
         private readonly ILogger<WebhookController> _logger;
