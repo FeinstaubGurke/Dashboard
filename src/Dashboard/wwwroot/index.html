@@ -59,12 +59,11 @@
 
     <div id="app">
         <div v-if="sensors" style="display: flex; padding:10px;">
-            <div v-for="item in sensors" :key="item.name" class="sensorbox">
+            <div v-for="item in sensors" :key="item.deviceId" class="sensorbox">
                 <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
-                    {{ item.name }}<br />
-                    {{ item.status }}<br />
-                    {{ new Date(item.last_signal_received_time).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                    }}
+                    {{ fetchName(item.deviceId) }}<br />
+                    Status: {{ item.status }}<br />
+                    {{ new Date(item.last_signal_received_time).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
                 </div>
             </div>
         </div>
@@ -89,6 +88,18 @@
                         error.value = err.message;
                     }
                 };
+
+                const fetchName = (deviceId) => {
+                    const deviceNames = {
+                        "eui-7066e1fffe0112ae": "FGXX",
+                        "eui-7066e1fffe0112ce": "FGXX",
+                        "eui-7066e1fffe011224": "FGXX",
+                        "eui-7066e1fffe01121e": "FGXX",
+                        "eui-7066e1fffe0112ac": "FG06"
+                    };
+
+                    return deviceNames[deviceId] || "Unbekannt";
+                }
 
                 onMounted(() => {
                     fetchData();

@@ -13,7 +13,7 @@ namespace Dashboard.Services
         {
             this._sensors.AddOrUpdate(sensorId, new Sensor
             {
-                Name = sensorId,
+                DeviceId = sensorId,
                 Status = "Try join",
                 LastSignalReceivedTime = DateTime.UtcNow,
                 IsReady = false
@@ -28,11 +28,11 @@ namespace Dashboard.Services
             });
         }
 
-        public void UpdateStatus(string sensorId, string status)
+        public void UpdateStatus(string deviceId, string status)
         {
-            this._sensors.AddOrUpdate(sensorId, new Sensor
+            this._sensors.AddOrUpdate(deviceId, new Sensor
             {
-                Name = sensorId,
+                DeviceId = deviceId,
                 Status = status,
                 LastSignalReceivedTime = DateTime.UtcNow,
                 IsReady = true
