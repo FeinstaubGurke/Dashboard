@@ -48,12 +48,14 @@
 
 
     <div id="app" style="display: flex;">
-        <div v-for="item in data" :key="item.name" class="sensorbox">
-            <div style="padding:20px;">
-                {{ item.name }}<br />
-                {{ item.isReady }}<br />
-                {{ item.status }}<br />
-                {{ item.lastSignalReceivedTime }}
+        <div v-if="data">
+            <div v-for="item in data" :key="item.name" class="sensorbox">
+                <div style="padding:20px;">
+                    {{ item.name }}<br />
+                    {{ item.isReady }}<br />
+                    {{ item.status }}<br />
+                    {{ item.lastSignalReceivedTime }}
+                </div>
             </div>
         </div>
     </div>
