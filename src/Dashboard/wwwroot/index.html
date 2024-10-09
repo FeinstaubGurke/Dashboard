@@ -7,12 +7,12 @@
     <script src="vue.global.js"></script>
     <style>
         body {
-            background-color: #9FC131;
+            background-color: #9fc131;
             margin: 0px;
         }
 
         h1 {
-            color: #9FC131;
+            color: #9fc131;
             text-align: center;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: 4rem;
@@ -25,14 +25,22 @@
         }
 
         .subheadline {
-            color: #9FC131;
+            color: #9fc131;
             text-align: center;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: 1.4rem;
         }
 
+        .sensorcollection {
+            padding: 20px;
+        }
+
+        .failure {
+            background-color: #ff0000;
+        }
+
         .sensorbox {
-            background-color: #DBF227;
+            background-color: #dbf227;
             width: 300px;
             height: 200px;
             margin-right: 20px;
@@ -52,9 +60,8 @@
     <div id="app">
         <div v-if="data" style="display: flex; padding:10px;">
             <div v-for="item in sensors" :key="item.name" class="sensorbox">
-                <div style="padding:20px;">
+                <div :class="[ item.is_ready ? undefined, : 'failure', 'sensorcollection' ]">
                     {{ item.name }}<br />
-                    {{ item.is_ready }}<br />
                     {{ item.status }}<br />
                     {{ item.last_signal_received_time }}
                 </div>
