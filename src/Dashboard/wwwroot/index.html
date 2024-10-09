@@ -31,6 +31,12 @@
             margin-block-start: 0;
         }
 
+        small {
+            color: #9fc131;
+            font-size: 0.7rem;
+            line-height: 0.6rem;
+        }
+
         .subheadline {
             color: #9fc131;
             text-align: center;
@@ -43,7 +49,7 @@
             text-align: center;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: clamp(0.9rem, 4vw, 1.2rem);
-            line-height: clamp(1.2rem, 4vw, 1.6rem);
+            line-height: clamp(1.5rem, 4vw, 1.6rem);
         }
 
         #app {
@@ -61,12 +67,26 @@
         }
 
         .sensorbox {
+            position: relative;
             background-color: #dbf227;
-            width: 300px;
+            width: 380px;
             margin-right: 20px;
             margin-bottom: 20px;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: 1.4rem;
+            border-radius: 10px;
+        }
+
+        .particleinfo {
+            position: absolute;
+            right: 0px;
+            top: 0px;
+            width: 70px;
+            height: 100%;
+            text-align: center;
+            background-color: #042940;
+            color: #9fc131;
+            border-top-right-radius: 10px;
         }
 
         .sensordetail {
@@ -102,10 +122,28 @@
     <div id="app">
         <div v-if="sensors" class="sensorcollection">
             <div v-for="item in sensors" :key="item.deviceId" class="sensorbox">
-                <div :class="[ item.is_ready ? undefined : 'failure', 'sensordetail' ]">
-                    <strong>{{ getSensorName(item.device_id) }}</strong><br />
-                    Status: {{ item.status }}<br />
-                    {{ new Date(item.last_signal_received_time).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
+                <div class="particleinfo">
+                    <div style="padding-top:35px; line-height: 1.2rem;">
+                        <strong>{{ item.pM2_5 }}</strong>
+                        <br />
+                        <span style="font-size: 13px">PM 2.5</span>
+                    </div>
+                    <div style="padding-top: 30px; line-height: 1.2rem;">
+                        <strong>{{ item.pM1 }}</strong>
+                        <br />
+                        <span style="font-size: 13px">PM 1</span>
+                    </div>
+                </div>
+                <div :class="[ item.isReady ? undefined : 'failure', 'sensordetail' ]">
+                    <strong>{{ item.name }}</strong>
+                    <div style="margin-top:6px;">
+                        {{ new Date(item.lastSignalReceivedTime).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}<br />
+                        <small>Last Signal Received</small>
+                    </div>
+                    <div style="margin-top:6px;">
+                        {{ item.status }}<br />
+                        <small>Status</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,26 +177,15 @@
                     }
                 };
 
-                const getSensorName = (deviceId) => {
-                    const deviceNames = {
-                        "eui-7066e1fffe0112ce": "Sensor FG01",
-                        "eui-7066e1fffe0112ae": "Sensor FG02",
-                        "eui-7066e1fffe01121e": "Sensor FG03",
-                        "eui-7066e1fffe0112d2": "Sensor FG04",
-                        "eui-7066e1fffe011224": "Sensor FG05",
-                        "eui-7066e1fffe0112ac": "Sensor FG06"
-                    };
-
-                    return deviceNames[deviceId] || "Unbekannt";
-                }
-
                 onMounted(() => {
                     fetchData();
+                    setInterval(function () {
+                        fetchData();
+                    }, 30000);
                 });
 
                 return {
-                    sensors,
-                    getSensorName
+                    sensors
                 }
             }
         }).mount('#app')
