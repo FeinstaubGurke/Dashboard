@@ -27,7 +27,7 @@ namespace Dashboard.Controllers
         [Route("UplinkMessage")]
         public ActionResult UplinkMessage(UplinkMessageWebhook uplinkMessageWebhook)
         {
-            this._logger.LogInformation($"UplinkMessage - {uplinkMessageWebhook.EndDeviceIds.DeviceId}");
+            this._logger.LogInformation($"UplinkMessage - {uplinkMessageWebhook.EndDeviceIds.DeviceId} Sensormodus:{uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.Sensormodus} TxReason:{uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.TxReason}");
 
             return StatusCode(StatusCodes.Status204NoContent);
         }
