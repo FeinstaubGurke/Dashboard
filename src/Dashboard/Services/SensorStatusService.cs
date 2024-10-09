@@ -14,7 +14,8 @@ namespace Dashboard.Services
             this._sensors.AddOrUpdate(sensorId, new Sensor { Name = sensorId, Status = "Try join" }, (key, existingValue) =>
             {
                 existingValue.Status = "Try join";
-                existingValue.LastSignalReceivedTime = null;
+                existingValue.LastSignalReceivedTime = DateTime.UtcNow;
+                existingValue.IsReady = false;
 
                 return existingValue;
             });
@@ -26,6 +27,7 @@ namespace Dashboard.Services
             {
                 existingValue.Status = status;
                 existingValue.LastSignalReceivedTime = DateTime.UtcNow;
+                existingValue.IsReady = true;
 
                 return existingValue;
             });

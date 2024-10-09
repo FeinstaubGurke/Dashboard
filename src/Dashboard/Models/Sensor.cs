@@ -5,5 +5,6 @@
         public string Name { get; set; }
         public string Status { get; set; }
         public DateTime? LastSignalReceivedTime { get; set; }
+        public bool IsReady { get; set; }
     }
 }
