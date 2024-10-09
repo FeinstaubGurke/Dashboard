@@ -11,7 +11,14 @@ namespace Dashboard.Services
 
         public void SetTryJoin(string sensorId)
         {
-            this._sensors.AddOrUpdate(sensorId, new Sensor { Name = sensorId, Status = "Try join" }, (key, existingValue) =>
+            this._sensors.AddOrUpdate(sensorId, new Sensor
+            {
+                Name = sensorId,
+                Status = "Try join",
+                LastSignalReceivedTime = DateTime.UtcNow,
+                IsReady = false
+            },
+            (key, existingValue) =>
             {
                 existingValue.Status = "Try join";
                 existingValue.LastSignalReceivedTime = DateTime.UtcNow;
@@ -23,7 +30,14 @@ namespace Dashboard.Services
 
         public void UpdateStatus(string sensorId, string status)
         {
-            this._sensors.AddOrUpdate(sensorId, new Sensor { Name = sensorId, Status = status }, (key, existingValue) =>
+            this._sensors.AddOrUpdate(sensorId, new Sensor
+            {
+                Name = sensorId,
+                Status = status,
+                LastSignalReceivedTime = DateTime.UtcNow,
+                IsReady = true
+            },
+            (key, existingValue) =>
             {
                 existingValue.Status = status;
                 existingValue.LastSignalReceivedTime = DateTime.UtcNow;

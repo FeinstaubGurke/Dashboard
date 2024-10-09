@@ -1,6 +1,8 @@
 ﻿<html>
 <head>
-    <title>Feinstaub Gurke</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feinstaubgurke</title>
     <link rel="stylesheet" href="fonts.css">
     <script src="vue.global.js"></script>
     <style>
@@ -38,14 +40,12 @@
     </div>
 
 
-    <div style="background-color: #DBF227; width:200px; height:200px">
-        <div id="app">
-            <div v-for="item in data">
-                {{ item.name }}<br />
-                {{ item.isReady }}<br />
-                {{ item.status }}<br />
-                {{ item.lastSignalReceivedTime }}
-            </div>
+    <div id="app" style="display: flex;">
+        <div v-for="item in data" :key="item.name" style="background-color: #DBF227; width:300px; height:200px; margin-right:20px;">
+            {{ item.name }}<br />
+            {{ item.isReady }}<br />
+            {{ item.status }}<br />
+            {{ item.lastSignalReceivedTime }}
         </div>
     </div>
 
