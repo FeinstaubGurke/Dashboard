@@ -27,11 +27,9 @@ namespace Dashboard.Controllers
         [Route("UplinkMessage")]
         public ActionResult UplinkMessage(UplinkMessageWebhook uplinkMessageWebhook)
         {
-            {
-                this._logger.LogInformation("UplinkMessage");
+            this._logger.LogInformation("UplinkMessage");
 
-                return StatusCode(StatusCodes.Status204NoContent);
-            }
+            return StatusCode(StatusCodes.Status204NoContent);
         }
     }
 }

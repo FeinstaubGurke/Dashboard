@@ -4,32 +4,32 @@
     {
         public EndDeviceIds EndDeviceIds { get; set; }
         public string[] CorrelationIds { get; set; }
-        public string ReceivedAt { get; set; }
+        public DateTime ReceivedAt { get; set; }
         public UplinkMessage UplinkMessage { get; set; }
     }
 
     public class UplinkMessage
     {
-        public string session_key_id { get; set; }
+        public string SessionKeyId { get; set; }
         public int f_port { get; set; }
         public int f_cnt { get; set; }
-        public string frm_payload { get; set; }
-        public DecodedPayload decoded_payload { get; set; }
-        public RxMetadata[] rx_metadata { get; set; }
-        public Settings settings { get; set; }
-        public string received_at { get; set; }
-        public string consumed_airtime { get; set; }
-        public NetworkIds network_ids { get; set; }
+        public string FrmPayload { get; set; }
+        public DecodedPayload DecodedPayload { get; set; }
+        public RxMetadata[] RxMetadata { get; set; }
+        public Settings Settings { get; set; }
+        public string ReceivedAt { get; set; }
+        public string ConsumedAirtime { get; set; }
+        public NetworkIds NetworkIds { get; set; }
     }
 
     public class DecodedPayload
     {
-        public Decoded decoded { get; set; }
+        public Decoded Decoded { get; set; }
     }
 
     public class Decoded
     {
-        public string bootloader_version { get; set; }
+        public string BootloaderVersion { get; set; }
         public string firmware_version { get; set; }
         public int hardware_version { get; set; }
         public string sensormodus { get; set; }
@@ -40,15 +40,15 @@
 
     public class Settings
     {
-        public DataRate data_rate { get; set; }
-        public string frequency { get; set; }
-        public long timestamp { get; set; }
-        public DateTime time { get; set; }
+        public DataRate DataRate { get; set; }
+        public string Frequency { get; set; }
+        public long Timestamp { get; set; }
+        public DateTime Time { get; set; }
     }
 
     public class DataRate
     {
-        public Lora lora { get; set; }
+        public Lora Lora { get; set; }
     }
 
     public class Lora
@@ -75,7 +75,7 @@
         public int Rssi { get; set; }
         public int ChannelRssi { get; set; }
         public float Snr { get; set; }
-        public Location Location { get; set; }
+        public Location? Location { get; set; }
         public string UplinkToken { get; set; }
         public int ChannelIndex { get; set; }
         public string ReceivedAt { get; set; }
@@ -89,8 +89,8 @@
 
     public class Location
     {
-        public float Latitude { get; set; }
-        public float Longitude { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
         public int Altitude { get; set; }
         public string Source { get; set; }
     }
