@@ -15,8 +15,8 @@
             color: #9fc131;
             text-align: center;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
-            font-size: 4rem;
-            line-height: 4rem;
+            font-size: clamp(1.9rem, 4vw, 4rem);
+            line-height: clamp(1.9rem, 4vw, 4rem);
             font-weight: 800;
             letter-spacing: 0.4rem;
             text-transform: uppercase;
@@ -28,11 +28,14 @@
             color: #9fc131;
             text-align: center;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
-            font-size: 1.4rem;
+            font-size: clamp(0.9rem, 4vw, 1.4rem);
+            line-height: clamp(0.9rem, 4vw, 1.4rem);
         }
 
         .sensorcollection {
-            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 10px;
         }
 
         .failure {
@@ -47,20 +50,31 @@
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: 1.4rem;
         }
+
+        .sensordetail {
+            padding: 20px;
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 600px) {
+            .sensorcollection {
+                flex-direction: column; /* Elemente untereinander anordnen */
+            }
+        }
     </style>
 </head>
 <body>
 
     <div style="background-color: #042940; padding: 40px 0 40px 0; margin-top: 7vh; margin-bottom: 7vh;">
         <h1>Feinstaubgurke</h1>
-        <div class="subheadline">Feinstaubmessen ganz einfach</div>
+        <div class="subheadline">Wir machen Feinstaubmessen, ganz einfach</div>
     </div>
 
 
     <div id="app">
-        <div v-if="sensors" style="display: flex; padding:10px;">
+        <div v-if="sensors" class="sensorcollection">
             <div v-for="item in sensors" :key="item.deviceId" class="sensorbox">
-                <div :class="[ item.is_ready ? undefined : 'failure', 'sensorcollection' ]">
+                <div :class="[ item.is_ready ? undefined : 'failure', 'sensordetail' ]">
                     <strong>{{ getSensorName(item.device_id) }}</strong><br />
                     Status: {{ item.status }}<br />
                     {{ new Date(item.last_signal_received_time).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
