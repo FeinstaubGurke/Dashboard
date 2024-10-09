@@ -9,9 +9,20 @@ namespace Dashboard.Services
 
         public SensorStatusService() { }
 
+        public void SetTryJoin(string sensorId)
+        {
+            this._sensors.AddOrUpdate(sensorId, new Sensor { Name = sensorId, Status = "Try join" }, (key, existingValue) =>
+            {
+                existingValue.Status = "Try join";
+                existingValue.LastSignalReceivedTime = null;
+
+                return existingValue;
+            });
+        }
+
         public void UpdateStatus(string sensorId, string status)
         {
-            this._sensors.AddOrUpdate(sensorId, new Sensor { Name = sensorId, Status = "Try connect" }, (key, existingValue) =>
+            this._sensors.AddOrUpdate(sensorId, new Sensor { Name = sensorId, Status = status }, (key, existingValue) =>
             {
                 existingValue.Status = status;
                 existingValue.LastSignalReceivedTime = DateTime.UtcNow;

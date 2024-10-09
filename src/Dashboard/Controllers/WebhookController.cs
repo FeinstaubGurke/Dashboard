@@ -25,7 +25,7 @@ namespace Dashboard.Controllers
         {
             this._logger.LogInformation($"JoinAccept - {webhook.EndDeviceIds.DeviceId}");
 
-            this._sensorStatusService.UpdateStatus(webhook.EndDeviceIds.DeviceId, "try join");
+            this._sensorStatusService.SetTryJoin(webhook.EndDeviceIds.DeviceId);
 
             return StatusCode(StatusCodes.Status204NoContent);
         }
