@@ -7,6 +7,7 @@ namespace Dashboard.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [ServiceFilter(typeof(CustomJsonNamingPolicyFilter))]
     public class WebhookController : ControllerBase
     {
         private readonly ILogger<WebhookController> _logger;
@@ -22,7 +23,6 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("JoinAccept")]
-        [ServiceFilter(typeof(CustomJsonNamingPolicyFilter))]
         public ActionResult JoinAccept(JoinAcceptWebhook webhook)
         {
             this._logger.LogInformation($"JoinAccept - {webhook.EndDeviceIds.DeviceId}");
@@ -34,7 +34,6 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("UplinkMessage")]
-        [ServiceFilter(typeof(CustomJsonNamingPolicyFilter))]
         public ActionResult UplinkMessage(UplinkMessageWebhook webhook)
         {
             this._logger.LogInformation($"UplinkMessage - {webhook.EndDeviceIds.DeviceId} Sensormodus:{webhook.UplinkMessage.DecodedPayload.Decoded.Sensormodus} TxReason:{webhook.UplinkMessage.DecodedPayload.Decoded.TxReason}");
