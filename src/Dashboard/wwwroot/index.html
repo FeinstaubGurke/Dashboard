@@ -124,12 +124,12 @@
             <div v-for="item in sensors" :key="item.deviceId" class="sensorbox">
                 <div class="particleinfo">
                     <div style="padding-top:35px; line-height: 1.2rem;">
-                        <strong>{{ item.pM2_5 }}</strong>
+                        <strong>{{ item.pM2_5 ?? '-' }}</strong>
                         <br />
                         <span style="font-size: 13px">PM 2.5</span>
                     </div>
                     <div style="padding-top: 30px; line-height: 1.2rem;">
-                        <strong>{{ item.pM1 }}</strong>
+                        <strong>{{ item.pM1 ?? '-' }}</strong>
                         <br />
                         <span style="font-size: 13px">PM 1</span>
                     </div>
@@ -137,8 +137,8 @@
                 <div :class="[ item.isReady ? undefined : 'failure', 'sensordetail' ]">
                     <strong>{{ item.name }}</strong>
                     <div style="margin-top:6px;">
-                        {{ new Date(item.lastSignalReceivedTime).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}<br />
-                        <small>Last Signal Received</small>
+                        {{ lastSignalInMinutes(item.lastSignalReceivedTime) }} minutes ago<br />
+                        <small>Last Signal Received: {{ lastSignalFormatted(item.lastSignalReceivedTime) }}</small>
                     </div>
                     <div style="margin-top:6px;">
                         {{ item.status }}<br />
@@ -177,6 +177,17 @@
                     }
                 };
 
+                const lastSignalInMinutes = (date) => {
+                    var startDate = new Date(date);
+                    var endDate = new Date();
+                    var seconds = (endDate.getTime() - startDate.getTime()) / 1000 / 60;
+                    return Math.round(seconds);
+                }
+
+                const lastSignalFormatted = (date) => {
+                    return new Date(date).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                }
+
                 onMounted(() => {
                     fetchData();
                     setInterval(function () {
@@ -185,7 +196,9 @@
                 });
 
                 return {
-                    sensors
+                    sensors,
+                    lastSignalInMinutes,
+                    lastSignalFormatted
                 }
             }
         }).mount('#app')
