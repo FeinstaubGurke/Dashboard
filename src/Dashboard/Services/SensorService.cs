@@ -69,6 +69,10 @@ namespace Dashboard.Services
             {
                 status = "Active";
             }
+            else if (txReason.Equals("Joined", StringComparison.OrdinalIgnoreCase))
+            {
+                status = "Ready";
+            }
 
             this._sensors.AddOrUpdate(deviceId, new Sensor
             {
