@@ -47,6 +47,8 @@
         }
 
         .footer {
+            margin-top: 10vh;
+            margin-bottom: 10vh;
             text-align: center;
             font-family: 'Poppins', Arial, Verdana, sans-serif;
             font-size: clamp(0.9rem, 4vw, 1.2rem);
@@ -138,9 +140,21 @@
                 </div>
                 <div class="sensordetail">
                     <strong>{{ item.name }}</strong>
+                    <div style="margin-top:6px; font-size:0.9rem;">
+                        <div v-if="item.description">{{ item.description }}</div>
+                        <div v-if="item.city">
+                            {{ item.city }} | {{ item.district }}
+                        </div>
+                    </div>
                     <div style="margin-top:6px;">
-                        {{ lastSignalInMinutes(item.lastSignalReceivedTime) }} minutes ago<br />
-                        <small>Last Signal Received: {{ lastSignalFormatted(item.lastSignalReceivedTime) }}</small>
+                        <template v-if="item.lastSignalReceivedTime">
+                            {{ lastSignalInMinutes(item.lastSignalReceivedTime) }} minutes ago
+                            <br />
+                            <small>Last Signal Received: {{ lastSignalFormatted(item.lastSignalReceivedTime) }}</small>
+                        </template>
+                        <template v-else>
+                            -
+                        </template>
                     </div>
                     <div style="margin-top:6px;">
                         {{ item.status }}<br />

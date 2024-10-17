@@ -1,4 +1,5 @@
-﻿using Dashboard.Models;
+﻿using Dashboard.Clients;
+using Dashboard.Models;
 using System.Collections.Concurrent;
 
 namespace Dashboard.Services
@@ -6,33 +7,29 @@ namespace Dashboard.Services
     public class SensorService
     {
         private readonly ConcurrentDictionary<string, Sensor> _sensors = new ConcurrentDictionary<string, Sensor>();
-        private readonly Dictionary<string, string> _sensorMapping = new Dictionary<string, string>();
 
-        public SensorService()
+        public SensorService(TheThingsStackClient theThingsStackClient)
         {
-            this._sensorMapping.Add("eui-7066e1fffe0112ce", "Sensor FG01");
-            this._sensorMapping.Add("eui-7066e1fffe0112ae", "Sensor FG02");
-            this._sensorMapping.Add("eui-7066e1fffe01121e", "Sensor FG03");
-            this._sensorMapping.Add("eui-7066e1fffe0112d2", "Sensor FG04");
-            this._sensorMapping.Add("eui-7066e1fffe011224", "Sensor FG05");
-            this._sensorMapping.Add("eui-7066e1fffe0112ac", "Sensor FG06");
-        }
+            var endDevices = theThingsStackClient.GetDevicesAsync().GetAwaiter().GetResult();
 
-        private bool TryGetSensorName(string deviceId, out string? sensorName)
-        {
-            return this._sensorMapping.TryGetValue(deviceId, out sensorName);
+            foreach (var device in endDevices)
+            {
+                this._sensors.TryAdd(device.ids.device_id, new Sensor
+                {
+                    DeviceId = device.ids.device_id,
+                    Name = device.name,
+                    Description = device.description,
+                    City = device.attributes?.city,
+                    District = device.attributes?.district,
+                    Status = "unknown"
+                });
+            }
         }
 
         public void SetTryJoin(string deviceId)
         {
-            if (!this.TryGetSensorName(deviceId, out var sensorName))
-            {
-                return;
-            }
-
             this._sensors.AddOrUpdate(deviceId, new Sensor
             {
-                Name = sensorName,
                 DeviceId = deviceId,
                 Status = "Try join",
                 LastSignalReceivedTime = DateTime.UtcNow,
@@ -59,11 +56,6 @@ namespace Dashboard.Services
             double? pm1,
             double? pm2_5)
         {
-            if (!this.TryGetSensorName(deviceId, out var sensorName))
-            {
-                return;
-            }
-
             var status = "unknown";
             if (txReason.Equals("Timer", StringComparison.OrdinalIgnoreCase))
             {
@@ -76,7 +68,6 @@ namespace Dashboard.Services
 
             this._sensors.AddOrUpdate(deviceId, new Sensor
             {
-                Name = sensorName,
                 DeviceId = deviceId,
                 Status = status,
                 LastSignalReceivedTime = DateTime.UtcNow,

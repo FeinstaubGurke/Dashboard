@@ -1,10 +1,12 @@
+using Dashboard.Clients;
 using Dashboard.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SensorService>();
+builder.Services.AddSingleton<TheThingsStackClient>();
 
 builder.Services.AddControllers();
 
