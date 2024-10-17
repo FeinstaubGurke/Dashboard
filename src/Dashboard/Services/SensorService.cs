@@ -11,6 +11,10 @@ namespace Dashboard.Services
         public SensorService(TheThingsStackClient theThingsStackClient)
         {
             var endDevices = theThingsStackClient.GetDevicesAsync().GetAwaiter().GetResult();
+            if (endDevices == null)
+            {
+                throw new Exception("TheThingsStackClient failure");
+            }
 
             foreach (var device in endDevices)
             {
