@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<TheThingsStackClient>();
+builder.Services.AddScoped<IObjectStorageService, S3ObjectStorageService>();
 
 builder.Services.AddControllers();
 

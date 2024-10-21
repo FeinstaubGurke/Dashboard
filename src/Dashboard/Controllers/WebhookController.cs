@@ -12,13 +12,16 @@ namespace Dashboard.Controllers
         private readonly ILogger<WebhookController> _logger;
         private readonly SensorService _sensorService;
         private readonly JsonSerializerOptions _jsonSerializerOptions;
+        private readonly IObjectStorageService _objectStorageService;
 
         public WebhookController(
             ILogger<WebhookController> logger,
-            SensorService sensorService)
+            SensorService sensorService,
+            IObjectStorageService objectStorageService)
         {
             this._logger = logger;
             this._sensorService = sensorService;
+            this._objectStorageService = objectStorageService;
 
             this._jsonSerializerOptions = new JsonSerializerOptions
             {
@@ -28,9 +31,9 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("JoinAccept")]
-        public ActionResult JoinAccept([FromBody] JsonElement body)
+        public ActionResult JoinAccept([FromBody] JsonElement requestBody)
         {
-            var webhook = JsonSerializer.Deserialize<JoinAcceptWebhook>(body.GetRawText(), this._jsonSerializerOptions);
+            var webhook = JsonSerializer.Deserialize<JoinAcceptWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook == null)
             {
                 this._logger.LogInformation($"{nameof(JoinAccept)} - Deserialize failure");
@@ -46,9 +49,9 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("UplinkMessage")]
-        public ActionResult UplinkMessage([FromBody] JsonElement body)
+        public ActionResult UplinkMessage([FromBody] JsonElement requestBody)
         {
-            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(body.GetRawText(), this._jsonSerializerOptions);
+            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook == null)
             {
                 this._logger.LogInformation($"{nameof(UplinkMessage)} - Deserialize failure");
@@ -62,6 +65,14 @@ namespace Dashboard.Controllers
                 webhook.UplinkMessage.DecodedPayload.Decoded.TxReason,
                 webhook.UplinkMessage.DecodedPayload.Decoded.PM1,
                 webhook.UplinkMessage.DecodedPayload.Decoded.PM2_5);
+
+            using var memoryStream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(memoryStream))
+            {
+                requestBody.WriteTo(writer);
+            }
+
+            this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}{DateTime.Now:yyyy-MM-dd:HH:mm}.json", memoryStream);
 
             return StatusCode(StatusCodes.Status202Accepted);
         }
