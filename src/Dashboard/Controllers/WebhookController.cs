@@ -49,7 +49,7 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("UplinkMessage")]
-        public ActionResult UplinkMessage([FromBody] JsonElement requestBody)
+        public async Task<ActionResult> UplinkMessage([FromBody] JsonElement requestBody)
         {
             var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook == null)
@@ -72,7 +72,7 @@ namespace Dashboard.Controllers
                 requestBody.WriteTo(writer);
             }
 
-            this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}{DateTime.Now:yyyy-MM-dd:HH:mm}.json", memoryStream);
+            await this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}{DateTime.Now:yyyy-MM-dd:HH:mm}.json", memoryStream);
 
             return StatusCode(StatusCodes.Status202Accepted);
         }
