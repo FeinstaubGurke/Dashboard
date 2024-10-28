@@ -1,8 +1,10 @@
 ﻿using CreateReport;
 using CreateReport.Models;
 using CsvHelper;
+using Dashboard.Models;
 using Dashboard.Models.Webhooks;
 using System.Globalization;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 
@@ -14,6 +16,15 @@ var jsonSerializerOptions = new JsonSerializerOptions
 {
     PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
 };
+
+
+var httpClient = new HttpClient();
+var sensors = await httpClient.GetFromJsonAsync<Sensor[]>("https://feinstaubgurke.at/sensor");
+if (sensors == null)
+{
+    Console.WriteLine("Cannot load sensor data");
+    return;
+}
 
 var records = new List<CsvData>();
 
@@ -35,6 +46,7 @@ foreach (var file in files)
 var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o => new DeviceDataStatistic
 {
     DeviceId = o.Key,
+    DeviceTitle = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => $"{sensor.Name}, {sensor.City} - {sensor.District}").FirstOrDefault(),
     Data = o.ToList(),
     HourlyStatisticData = [..CreateStatistic(o.ToList(), csvData => csvData.PM2_5)]
 }).ToList();

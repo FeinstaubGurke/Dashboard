@@ -20,7 +20,7 @@ namespace CreateReport
             var page = builder.AddPage(PageSize.A2, false);
             var pageTop = new PdfPoint(0, page.PageSize.Top);
 
-            page.AddText("Feinstaubmesswerte", 20, pageTop.Translate(5, -25), font);
+            page.AddText("Feinstaub Messwerte PM2.5", 20, pageTop.Translate(5, -25), font);
 
             for (var i = 0; i < deviceDataStatistics.Length; i++)
             {
@@ -86,7 +86,10 @@ namespace CreateReport
                     page.AddText($"{lastDataPoint.Date:yyyy-MM-dd}", 12, new PdfPoint(page.PageSize.Right - 100, positionY - 20), font);
                 }
 
-                page.AddText(deviceDataStatistic.DeviceId, 12, new PdfPoint(5, positionY + chartElementHeight + 5), font);
+                if (deviceDataStatistic.DeviceTitle != null)
+                {
+                    page.AddText(deviceDataStatistic.DeviceTitle, 12, new PdfPoint(5, positionY + chartElementHeight + 5), font);
+                }
             }
 
             var fileBytes = builder.Build();
