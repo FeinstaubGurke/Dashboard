@@ -18,44 +18,60 @@ namespace CreateReport
                 }
             };
 
-            var trueTypeFontPath = "Roboto-Regular.ttf";
+            var trueTypeFontPath = "Fonts/Roboto-Regular.ttf";
             var font = builder.AddTrueTypeFont(File.ReadAllBytes(trueTypeFontPath));
 
-            var page = builder.AddPage(PageSize.A2, false);
-            var pageTop = new PdfPoint(0, page.PageSize.Top);
+            #region Cover page
 
-            page.AddText("Feinstaub Messwerte PM2.5", 20, pageTop.Translate(5, -25), font);
+            var page1 = builder.AddPage(PageSize.A4);
+            var pageCenter = new PdfPoint(page1.PageSize.Width / 2, page1.PageSize.Top / 2);
+
+            var titleText = "Feinstaubgurke";
+            var fontSize = 50;
+
+            var letterInfos = page1.MeasureText(titleText, fontSize, pageCenter, font);
+            var startPosition = letterInfos.Select(letterInfo => letterInfo.Location.X).Min();
+            var endPosition = letterInfos.Select(letterInfo => letterInfo.EndBaseLine.X).Max();
+            var textWidth = endPosition - startPosition;
+            page1.AddText(titleText, fontSize, pageCenter.Translate(-(textWidth / 2), 0), font);
+
+            #endregion
 
             for (var i = 0; i < deviceDataStatistics.Length; i++)
             {
-                var chartElementWidth = 9.8;
+                var page = builder.AddPage(PageSize.A4, false);
+                var pageTop = new PdfPoint(0, page.PageSize.Top);
+
+                var width = page.PageSize.Width - 50;
+
+                page.AddText("Messwerte PM2.5", 20, pageTop.Translate(5, -25), font);
+
+                var chartElementWidth = width / deviceDataStatistics[i].HourlyStatisticData.Length;
                 var chartElementHeight = 80;
 
-                var chartElementSpace = 5.0;
+                var pagePaddingLeft = 5.0;
                 var chartElementSpaceY = 50;
 
-                var positionY = page.PageSize.Top - ((i + 1) * (chartElementHeight + chartElementSpaceY));
+                var positionY = page.PageSize.Top - (chartElementHeight + chartElementSpaceY);
 
                 var deviceDataStatistic = deviceDataStatistics[i];
                 var dataPoints = deviceDataStatistic.HourlyStatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
 
                 var nextDay = false;
-                var lastDayPositionX = chartElementSpace;
+                var positionX = 0.0;
+                var lastDayPositionX = pagePaddingLeft;
 
                 for (var j = 0; j < dataPoints.Length; j++)
                 {
                     var dataPoint = dataPoints[j];
+                    nextDay = false;
 
-                    if (j > 0 && dataPoint.Date.DayOfWeek != dataPoints[j - 1].Date.DayOfWeek || j == dataPoints.Length - 1)
+                    if (j > 0 && dataPoint.Date.DayOfWeek != dataPoints[j - 1].Date.DayOfWeek)
                     {
                         nextDay = true;
                     }
-                    else
-                    {
-                        nextDay = false;
-                    }
 
-                    var positionX = (j * chartElementWidth) + chartElementSpace;
+                    positionX = (j * chartElementWidth) + pagePaddingLeft;
 
                     var chartElementVeryGoodHeight = chartElementHeight * dataPoint.VeryGood;
                     var chartElementVeryGoodPositionY = positionY;
@@ -69,34 +85,48 @@ namespace CreateReport
                     var chartElementVeryPoorPositionY = positionY + chartElementVeryGoodHeight + chartElementGoodHeight + chartElementSatisfactoryHeight + chartElementPoorHeight;
 
                     page.SetTextAndFillColor(13, 205, 45); //Light Green
-                    page.DrawRectangle(new PdfPoint(positionX, chartElementVeryGoodPositionY), chartElementWidth, chartElementVeryGoodHeight, 1, fill: true);
+                    page.DrawRectangle(new PdfPoint(positionX, chartElementVeryGoodPositionY), chartElementWidth, chartElementVeryGoodHeight, 0.1, fill: true);
 
                     page.SetTextAndFillColor(32, 142, 43); //Green
-                    page.DrawRectangle(new PdfPoint(positionX, chartElementGoodPositionY), chartElementWidth, chartElementGoodHeight, 1, fill: true);
+                    page.DrawRectangle(new PdfPoint(positionX, chartElementGoodPositionY), chartElementWidth, chartElementGoodHeight, 0.1, fill: true);
 
                     page.SetTextAndFillColor(220, 193, 58); //Orange
-                    page.DrawRectangle(new PdfPoint(positionX, chartElementSatisfactoryPositionY), chartElementWidth, chartElementSatisfactoryHeight, 1, fill: true);
+                    page.DrawRectangle(new PdfPoint(positionX, chartElementSatisfactoryPositionY), chartElementWidth, chartElementSatisfactoryHeight, 0.1, fill: true);
 
-                    page.SetTextAndFillColor(209, 67, 67); //Red
-                    page.DrawRectangle(new PdfPoint(positionX, chartElementPoorPositionY), chartElementWidth, chartElementPoorHeight, 1, fill: true);
+                    page.SetTextAndFillColor(255, 46, 53); //Red
+                    page.DrawRectangle(new PdfPoint(positionX, chartElementPoorPositionY), chartElementWidth, chartElementPoorHeight, 0.1, fill: true);
 
-                    page.SetTextAndFillColor(223, 2, 2); //Dark Red
-                    page.DrawRectangle(new PdfPoint(positionX, chartElementVeryPoorPositionY), chartElementWidth, chartElementVeryPoorHeight, 1, fill: true);
+                    page.SetTextAndFillColor(190, 1, 25); //Dark Red
+                    page.DrawRectangle(new PdfPoint(positionX, chartElementVeryPoorPositionY), chartElementWidth, chartElementVeryPoorHeight, 0.1, fill: true);
+
+                    #region Draw Day Info
 
                     if (nextDay)
                     {
-                        page.SetTextAndFillColor(220, 220, 220); //Light Gray
+                        page.SetTextAndFillColor(240, 240, 240); //Light Gray
                         page.DrawRectangle(new PdfPoint(lastDayPositionX, positionY - 8), positionX - lastDayPositionX, 8, lineWidth: 0, fill: true);
 
                         page.SetTextAndFillColor(10, 10, 10);
-                        page.AddText($"{dataPoint.Date:ddd}", 6, new PdfPoint(lastDayPositionX + 2, positionY - 6), font);
+                        page.AddText($"{dataPoints[j - 1].Date:ddd dd.MM.yyyy}", 6, new PdfPoint(lastDayPositionX + 2, positionY - 6), font);
 
                         lastDayPositionX = positionX;
                     }
 
+                    #endregion
+
                     page.SetTextAndFillColor(100, 100, 100);
                     page.AddText($"{dataPoint.Hour}", 5, new PdfPoint(positionX, positionY - 14), font);
                 }
+
+                #region LastDay Info
+
+                page.SetTextAndFillColor(240, 240, 240); //Light Gray
+                page.DrawRectangle(new PdfPoint(lastDayPositionX, positionY - 8), (positionX - lastDayPositionX + chartElementWidth), 8, lineWidth: 0, fill: true);
+
+                page.SetTextAndFillColor(10, 10, 10);
+                page.AddText($"{dataPoints[dataPoints.Length - 1].Date:ddd dd.MM.yyyy}", 6, new PdfPoint(lastDayPositionX + 2, positionY - 6), font);
+
+                #endregion
 
                 page.SetTextAndFillColor(0, 0, 0);
 
