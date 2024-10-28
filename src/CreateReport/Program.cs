@@ -1,8 +1,10 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using CreateReport;
+using CreateReport.Models;
 using CsvHelper;
 using Dashboard.Models.Webhooks;
 using System.Globalization;
 using System.Text.Json;
+
 
 Console.WriteLine("Report Creator");
 
@@ -30,10 +32,22 @@ foreach (var file in files)
     });
 }
 
-var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o => new
+var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o => new DeviceDataStatistic
 {
     DeviceId = o.Key,
-    Data = o.ToList()
+    Data = o.ToList(),
+    HourlyStatisticData = [..CreateStatistic(o.ToList(), csvData => csvData.PM2_5)]
+}).ToList();
+
+
+PdfHelper.Draw(groupedDataByDeviceId.ToArray());
+
+var groupedDataByDeviceId1 = records.GroupBy(o => new { o.DeviceId, o.Timestamp.Date }).Select(o => new
+{
+    DeviceId = o.Key.DeviceId,
+    Date = o.Key.Date,
+    PM1 = o.Select(o => o.PM1).Average(),
+    PM2_5 = o.Select(o => o.PM2_5).Average()
 });
 
 Console.WriteLine("Average Values by Date and Device");
@@ -54,10 +68,27 @@ using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
 }
 
 
-public class CsvData
+static IEnumerable<HourlyStatisticData> CreateStatistic(List<CsvData> records, Func<CsvData, double?> field)
 {
-    public string DeviceId { get; set; }
-    public DateTime Timestamp { get; set; }
-    public double? PM2_5 { get; set; }
-    public double? PM1 { get; set; }
+    return records.GroupBy(o => new { o.Timestamp.Date, o.Timestamp.Hour }).Select(o =>
+    {
+        var recordsInThisHour = (double)o.Count();
+
+        var veryGood = o.Where(x => field(x) >= 0 && field(x) < 5).Count();
+        var good = o.Where(x => field(x) >= 5 && field(x) < 10).Count();
+        var satisfactory = o.Where(x => field(x) >= 10 && field(x) < 15).Count();
+        var poor = o.Where(x => field(x) >= 15 && field(x) < 20).Count();
+        var veryPoor = o.Where(x => field(x) >= 20).Count();
+
+        return new HourlyStatisticData
+        {
+            Date = DateOnly.FromDateTime(o.Key.Date),
+            Hour = o.Key.Hour,
+            VeryGood = veryGood / recordsInThisHour,
+            Good = good / recordsInThisHour,
+            Satisfactory = satisfactory / recordsInThisHour,
+            Poor = poor / recordsInThisHour,
+            VeryPoor = veryPoor / recordsInThisHour,
+        };
+    });
 }
