@@ -18,7 +18,7 @@ var jsonSerializerOptions = new JsonSerializerOptions
 };
 
 
-var httpClient = new HttpClient();
+using var httpClient = new HttpClient();
 var sensors = await httpClient.GetFromJsonAsync<Sensor[]>("https://feinstaubgurke.at/sensor");
 if (sensors == null)
 {
@@ -43,16 +43,18 @@ foreach (var file in files)
     });
 }
 
-var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o => new DeviceDataStatistic
+var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o => new DeviceInfo
 {
     DeviceId = o.Key,
-    DeviceTitle = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => $"{sensor.Name}, {sensor.City} - {sensor.District}").FirstOrDefault(),
+    Name = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => sensor.Name).FirstOrDefault(),
+    City = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => sensor.City).FirstOrDefault(),
+    District = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => sensor.District).FirstOrDefault(),
     Data = o.ToList(),
     HourlyStatisticData = [..CreateStatistic(o.ToList(), csvData => csvData.PM2_5)]
 }).ToList();
 
-
-PdfHelper.Draw(groupedDataByDeviceId.ToArray());
+using var pdfHelper = new PdfHelper();
+pdfHelper.CreateReport(groupedDataByDeviceId.ToArray());
 
 var groupedDataByDeviceId1 = records.GroupBy(o => new { o.DeviceId, o.Timestamp.Date }).Select(o => new
 {
@@ -72,12 +74,11 @@ foreach (var data in groupedDataByDeviceId)
     }
 }
 
-
-using (var writer = new StreamWriter("report.csv"))
-using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
-{
-    csv.WriteRecords(records);
-}
+//using (var writer = new StreamWriter("report.csv"))
+//using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
+//{
+//    csv.WriteRecords(records);
+//}
 
 
 static IEnumerable<HourlyStatisticData> CreateStatistic(List<CsvData> records, Func<CsvData, double?> field)
