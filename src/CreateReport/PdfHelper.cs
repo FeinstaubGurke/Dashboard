@@ -2,6 +2,7 @@
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Writer;
+using static System.Net.Mime.MediaTypeNames;
 using static UglyToad.PdfPig.Writer.PdfDocumentBuilder;
 
 namespace CreateReport
@@ -19,7 +20,7 @@ namespace CreateReport
                 ArchiveStandard = PdfAStandard.A1A,
                 DocumentInformation = new PdfDocumentBuilder.DocumentInformationBuilder
                 {
-                    Title = "Feinstaub Report"
+                    Title = "Feinstaubgurke Report"
                 }
             };
 
@@ -58,15 +59,19 @@ namespace CreateReport
                 {
                     page.AddText($"{deviceInfo.City} {deviceInfo.District}", 20, pageTop.Translate(paddingX, -45), this._headlineFont);
                     page.AddText(deviceInfo.Name, 8, pageTop.Translate(paddingX, -54), this._defaultFont);
+
+                    page.AddText("PM2.5", 18, pageTop.Translate(paddingX, -85), this._headlineFont);
                 }
 
                 #endregion
 
                 var pagePadding = 10.0;
 
+                page.AddText("Tagesmittelwert", 12, pageTop.Translate(pagePadding, -120), this._headlineFont);
+
                 var dailyAverageValues = deviceInfo.Data.GroupBy(o => o.Timestamp.Date).Select(o => new { Date = o.Key, AveragePm2_5 = o.Average(o => o.PM2_5) });
 
-                var position1 = pageTop.Translate(pagePadding, -120);
+                var position1 = pageTop.Translate(pagePadding, -180);
                 var boxWidth = 80;
                 var boxHeight = 50;
 
@@ -89,11 +94,11 @@ namespace CreateReport
                 }
 
                 var dataPoints = deviceInfo.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
-                this.DrawHourGraphic(page, 200, dataPoints, 200, pagePadding);
+                this.DrawHourGraphic(page, 220, dataPoints, 200, pagePadding);
             }
 
             var fileBytes = this._pdfDocumentBuilder.Build();
-            File.WriteAllBytes("AirQualityReport.pdf", fileBytes);
+            File.WriteAllBytes("Feinstaub-Report.pdf", fileBytes);
         }
 
         private void DrawHourGraphic(
@@ -111,7 +116,7 @@ namespace CreateReport
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
-            page.AddText("Detail Report PM2.5", 12, drawInitPosition.MoveY(10), this._headlineFont);
+            page.AddText("Tagesverlauf", 12, drawInitPosition.MoveY(10), this._headlineFont);
 
             var positionX = 0.0;
             var positionY = page.PageSize.Top - positionShiftY;
