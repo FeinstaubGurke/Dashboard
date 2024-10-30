@@ -3,10 +3,12 @@
     public enum DrawColor
     {
         Black,
+        Gray,
         Green,
         DarkGreen,
         Yellow,
         Red,
-        DarkRed
+        DarkRed,
+        Purple
     }
 }

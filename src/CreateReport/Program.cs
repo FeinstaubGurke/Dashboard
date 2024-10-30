@@ -28,7 +28,8 @@ if (sensors == null)
 
 var records = new List<SensorRecord>();
 
-Console.WriteLine("Load webhook data");
+Console.Write("Load webhook data from filesystem");
+var i = 0;
 var files = Directory.GetFiles(sensorDataPath);
 foreach (var file in files)
 {
@@ -42,7 +43,15 @@ foreach (var file in files)
         PM1 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM1,
         PM2_5 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM2_5
     });
+
+    i++;
+
+    if (i % 1000 == 0)
+    {
+        Console.Write(".");
+    }
 }
+Console.WriteLine("");
 
 Console.WriteLine("Group data");
 var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
@@ -73,15 +82,15 @@ pdfHelper.CreateReport(groupedDataByDeviceId.ToArray());
 //    PM2_5 = o.Select(o => o.PM2_5).Average()
 //});
 
-Console.WriteLine("Average Values by Date and Device");
-foreach (var data in groupedDataByDeviceId)
-{
-    var pm2_5GroupedByDate = data.Data.GroupBy(o => o.Timestamp.Date).Select(o => new { Date = o.Key, AvgPm2_5 = o.Average(o => o.PM2_5) });
-    foreach (var m in pm2_5GroupedByDate)
-    {
-        Console.WriteLine($"{data.DeviceId} {m.Date:yyyy-MM-dd} {m.AvgPm2_5:0.00}");
-    }
-}
+//Console.WriteLine("Average Values by Date and Device");
+//foreach (var data in groupedDataByDeviceId)
+//{
+//    var pm2_5GroupedByDate = data.Data.GroupBy(o => o.Timestamp.Date).Select(o => new { Date = o.Key, AvgPm2_5 = o.Average(o => o.PM2_5) });
+//    foreach (var m in pm2_5GroupedByDate)
+//    {
+//        Console.WriteLine($"{data.DeviceId} {m.Date:yyyy-MM-dd} {m.AvgPm2_5:0.00}");
+//    }
+//}
 
 //using (var writer = new StreamWriter("report.csv"))
 //using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))

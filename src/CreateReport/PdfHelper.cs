@@ -38,8 +38,8 @@ namespace CreateReport
 
             var coverPage = this._pdfDocumentBuilder.AddPage(PageSize.A4);
 
-            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50);
-            this.DrawCenterText(coverPage, "Report für die Messwerte", fontSize: 20, shiftY: -40);
+            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50, font: this._headlineFont);
+            this.DrawCenterText(coverPage, "Analyse und Visualisierung der Feinstaubbelastung", fontSize: 20, font: this._defaultFont, shiftY: -40);
 
             #endregion
 
@@ -47,23 +47,49 @@ namespace CreateReport
 
             for (var i = 0; i < deviceInfos.Length; i++)
             {
-                var deviceDataStatistic = deviceInfos[i];
+                var deviceInfo = deviceInfos[i];
 
                 var page = this._pdfDocumentBuilder.AddPage(PageSize.A4, false);
                 var pageTop = new PdfPoint(0, page.PageSize.Top);
 
                 #region Page Info Text
 
-                if (deviceDataStatistic.Name != null)
+                if (deviceInfo.Name != null)
                 {
-                    page.AddText($"{deviceDataStatistic.City} {deviceDataStatistic.District}", 20, pageTop.Translate(paddingX, -45), this._headlineFont);
-                    page.AddText(deviceDataStatistic.Name, 8, pageTop.Translate(paddingX, -54), this._defaultFont);
+                    page.AddText($"{deviceInfo.City} {deviceInfo.District}", 20, pageTop.Translate(paddingX, -45), this._headlineFont);
+                    page.AddText(deviceInfo.Name, 8, pageTop.Translate(paddingX, -54), this._defaultFont);
                 }
 
                 #endregion
 
-                var dataPoints = deviceDataStatistic.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
-                this.DrawHourGraphic(page, 100, dataPoints, 200);
+                var pagePadding = 10.0;
+
+                var dailyAverageValues = deviceInfo.Data.GroupBy(o => o.Timestamp.Date).Select(o => new { Date = o.Key, AveragePm2_5 = o.Average(o => o.PM2_5) });
+
+                var position1 = pageTop.Translate(pagePadding, -120);
+                var boxWidth = 80;
+                var boxHeight = 50;
+
+                foreach (var dayAverage in dailyAverageValues)
+                {
+                    if (dayAverage.AveragePm2_5 == null)
+                    {
+                        continue;
+                    }
+
+                    var color = this.GetColorFromMeasurement(dayAverage.AveragePm2_5.Value);
+
+                    this.SetColor(page, color);
+                    page.DrawRectangle(position1, boxWidth, boxHeight, fill: true);
+                    this.SetColor(page, DrawColor.Black);
+                    page.AddText($"{dayAverage.Date:dd.MM.yyyy}", 9, position1.Translate(5, 20), this._headlineFont);
+                    page.AddText($"{dayAverage.AveragePm2_5:0.00}", 10, position1.Translate(5, 10), this._defaultFont);
+
+                    position1 = position1.MoveX(boxWidth);
+                }
+
+                var dataPoints = deviceInfo.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
+                this.DrawHourGraphic(page, 200, dataPoints, 200, pagePadding);
             }
 
             var fileBytes = this._pdfDocumentBuilder.Build();
@@ -74,18 +100,18 @@ namespace CreateReport
             PdfPageBuilder page,
             int positionShiftY,
             HourlyStatisticData[] dataPoints,
-            int chartElementHeight = 200)
+            int chartElementHeight = 200,
+            double pagePadding = 10)
         {
             var font = this._defaultFont;
-            var pagePadding = 10.0;
-
             var dayInfoPositionShiftY = 0;
 
             var pageWidth = page.PageSize.Width - (pagePadding * 2);
             var chartElementWidth = pageWidth / dataPoints.Length;
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
-            page.AddText("Detail Report PM2.5", 12, drawInitPosition.MoveY(10), font);
+            this.SetColor(page, DrawColor.Black);
+            page.AddText("Detail Report PM2.5", 12, drawInitPosition.MoveY(10), this._headlineFont);
 
             var positionX = 0.0;
             var positionY = page.PageSize.Top - positionShiftY;
@@ -185,6 +211,32 @@ namespace CreateReport
             this.SetColor(page, DrawColor.Black);
         }
 
+        private DrawColor GetColorFromMeasurement(double measurement)
+        {
+            if (measurement >= 0 && measurement < 5)
+            {
+                return DrawColor.Green;
+            }
+            else if (measurement >= 5 && measurement < 10)
+            {
+                return DrawColor.DarkGreen;
+            }
+            else if (measurement >= 10 && measurement < 15)
+            {
+                return DrawColor.Yellow;
+            }
+            else if (measurement >= 15 && measurement < 20)
+            {
+                return DrawColor.Red;
+            }
+            else if (measurement >= 20 && measurement < 25)
+            {
+                return DrawColor.DarkRed;
+            }
+
+            return DrawColor.Purple;
+        }
+
         private void SetColor(
             PdfPageBuilder page,
             DrawColor color)
@@ -193,6 +245,9 @@ namespace CreateReport
             {
                 case DrawColor.Black:
                     page.SetTextAndFillColor(0, 0, 0);
+                    break;
+                case DrawColor.Gray:
+                    page.SetTextAndFillColor(10, 10, 10);
                     break;
                 case DrawColor.Green:
                     page.SetTextAndFillColor(13, 205, 45);
@@ -209,6 +264,9 @@ namespace CreateReport
                 case DrawColor.DarkRed:
                     page.SetTextAndFillColor(190, 1, 25);
                     break;
+                case DrawColor.Purple:
+                    page.SetTextAndFillColor(218, 112, 214);
+                    break;
                 default:
                     break;
             }
@@ -218,15 +276,16 @@ namespace CreateReport
             PdfPageBuilder page,
             string text,
             int fontSize,
+            AddedFont font,
             int shiftY = 0)
         {
             var pageCenter = new PdfPoint(page.PageSize.Width / 2, page.PageSize.Top / 2);
 
-            var letterInfos = page.MeasureText(text, fontSize, pageCenter, this._headlineFont);
+            var letterInfos = page.MeasureText(text, fontSize, pageCenter, font);
             var startPosition = letterInfos.Select(letterInfo => letterInfo.Location.X).Min();
             var endPosition = letterInfos.Select(letterInfo => letterInfo.EndBaseLine.X).Max();
             var textWidth = endPosition - startPosition;
-            page.AddText(text, fontSize, pageCenter.Translate(-(textWidth / 2), shiftY), this._headlineFont);
+            page.AddText(text, fontSize, pageCenter.Translate(-(textWidth / 2), shiftY), font);
         }
 
         private void DrawDayBox(
@@ -242,7 +301,7 @@ namespace CreateReport
 
             page.SetTextAndFillColor(240, 240, 240); //Light Gray
             page.DrawRectangle(drawPosition, width, height, lineWidth: 0, fill: true);
-            page.SetTextAndFillColor(10, 10, 10);
+            this.SetColor(page, DrawColor.Gray);
             page.AddText($"{date:ddd dd.MM.yyyy}", 6, pdfPoint.Translate(2, -(fontSize + 1)), this._defaultFont);
         }
     }
