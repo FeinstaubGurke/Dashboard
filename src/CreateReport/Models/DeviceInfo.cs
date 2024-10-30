@@ -6,7 +6,7 @@
         public string? Name { get; set; }
         public string? City { get; set; }
         public string? District { get; set; }
-        public List<CsvData> Data { get; set; }
-        public HourlyStatisticData[] HourlyStatisticData { get; set; }
+        public List<SensorRecord> Data { get; set; }
+        public HourlyStatisticData[] HourlyPM2_5StatisticData { get; set; }
     }
 }

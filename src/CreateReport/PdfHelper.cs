@@ -37,19 +37,13 @@ namespace CreateReport
             #region Cover page
 
             var coverPage = this._pdfDocumentBuilder.AddPage(PageSize.A4);
-            var pageCenter = new PdfPoint(coverPage.PageSize.Width / 2, coverPage.PageSize.Top / 2);
 
-            var titleText = "Feinstaubgurke";
-            var fontSize = 50;
-            var paddingX = 10;
-
-            var letterInfos = coverPage.MeasureText(titleText, fontSize, pageCenter, this._headlineFont);
-            var startPosition = letterInfos.Select(letterInfo => letterInfo.Location.X).Min();
-            var endPosition = letterInfos.Select(letterInfo => letterInfo.EndBaseLine.X).Max();
-            var textWidth = endPosition - startPosition;
-            coverPage.AddText(titleText, fontSize, pageCenter.Translate(-(textWidth / 2), 0), this._headlineFont);
+            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50);
+            this.DrawCenterText(coverPage, "Report für die Messwerte", fontSize: 20, shiftY: -40);
 
             #endregion
+
+            var paddingX = 10;
 
             for (var i = 0; i < deviceInfos.Length; i++)
             {
@@ -68,7 +62,7 @@ namespace CreateReport
 
                 #endregion
 
-                var dataPoints = deviceDataStatistic.HourlyStatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
+                var dataPoints = deviceDataStatistic.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
                 this.DrawHourGraphic(page, 100, dataPoints, 200);
             }
 
@@ -121,19 +115,19 @@ namespace CreateReport
                 var chartElementVeryPoorHeight = chartElementHeight * dataPoint.VeryPoor;
                 var chartElementVeryPoorPositionY = chartElementVeryGoodHeight + chartElementGoodHeight + chartElementSatisfactoryHeight + chartElementPoorHeight;
 
-                page.SetTextAndFillColor(13, 205, 45); //Green
+                this.SetColor(page, DrawColor.Green);
                 page.DrawRectangle(position.MoveY(chartElementVeryGoodPositionY), chartElementWidth, chartElementVeryGoodHeight, 0.1, fill: true);
 
-                page.SetTextAndFillColor(32, 142, 43); //Dark Green
+                this.SetColor(page, DrawColor.DarkGreen);
                 page.DrawRectangle(position.MoveY(chartElementGoodPositionY), chartElementWidth, chartElementGoodHeight, 0.1, fill: true);
 
-                page.SetTextAndFillColor(220, 193, 58); //Yellow
+                this.SetColor(page, DrawColor.Yellow);
                 page.DrawRectangle(position.MoveY(chartElementSatisfactoryPositionY), chartElementWidth, chartElementSatisfactoryHeight, 0.1, fill: true);
 
-                page.SetTextAndFillColor(255, 46, 53); //Red
+                this.SetColor(page, DrawColor.Red);
                 page.DrawRectangle(position.MoveY(chartElementPoorPositionY), chartElementWidth, chartElementPoorHeight, 0.1, fill: true);
 
-                page.SetTextAndFillColor(190, 1, 25); //Dark Red
+                this.SetColor(page, DrawColor.DarkRed);
                 page.DrawRectangle(position.MoveY(chartElementVeryPoorPositionY), chartElementWidth, chartElementVeryPoorHeight, 0.1, fill: true);
 
                 #region Draw Day Info
@@ -163,7 +157,76 @@ namespace CreateReport
 
             #endregion
 
-            page.SetTextAndFillColor(0, 0, 0);
+            #region Draw Legend
+
+            var legendInformations = new[]
+            { 
+                new { Text = "Sehr gut", Color = DrawColor.Green },
+                new { Text = "Gut", Color = DrawColor.DarkGreen },
+                new { Text = "Befriedigend", Color = DrawColor.Yellow },
+                new { Text = "Schlecht", Color = DrawColor.Red },
+                new { Text = "Sehr schlecht", Color = DrawColor.DarkRed },
+            };
+
+            var legendBasePosition = drawInitPosition.MoveY(-chartElementHeight - 25);
+
+            foreach (var legend in legendInformations)
+            {
+                this.SetColor(page, legend.Color);
+                page.DrawRectangle(legendBasePosition, 10, 10, fill: true);
+                this.SetColor(page, DrawColor.Black);
+                page.AddText(legend.Text, 6, legendBasePosition.Translate(12, 2), font);
+
+                legendBasePosition = legendBasePosition.MoveX(50);
+            }
+
+            #endregion
+
+            this.SetColor(page, DrawColor.Black);
+        }
+
+        private void SetColor(
+            PdfPageBuilder page,
+            DrawColor color)
+        {
+            switch (color)
+            {
+                case DrawColor.Black:
+                    page.SetTextAndFillColor(0, 0, 0);
+                    break;
+                case DrawColor.Green:
+                    page.SetTextAndFillColor(13, 205, 45);
+                    break;
+                case DrawColor.DarkGreen:
+                    page.SetTextAndFillColor(32, 142, 43);
+                    break;
+                case DrawColor.Yellow:
+                    page.SetTextAndFillColor(220, 193, 58);
+                    break;
+                case DrawColor.Red:
+                    page.SetTextAndFillColor(255, 46, 53);
+                    break;
+                case DrawColor.DarkRed:
+                    page.SetTextAndFillColor(190, 1, 25);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void DrawCenterText(
+            PdfPageBuilder page,
+            string text,
+            int fontSize,
+            int shiftY = 0)
+        {
+            var pageCenter = new PdfPoint(page.PageSize.Width / 2, page.PageSize.Top / 2);
+
+            var letterInfos = page.MeasureText(text, fontSize, pageCenter, this._headlineFont);
+            var startPosition = letterInfos.Select(letterInfo => letterInfo.Location.X).Min();
+            var endPosition = letterInfos.Select(letterInfo => letterInfo.EndBaseLine.X).Max();
+            var textWidth = endPosition - startPosition;
+            page.AddText(text, fontSize, pageCenter.Translate(-(textWidth / 2), shiftY), this._headlineFont);
         }
 
         private void DrawDayBox(

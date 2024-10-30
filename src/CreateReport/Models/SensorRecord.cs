@@ -1,6 +1,6 @@
 ﻿namespace CreateReport.Models
 {
-    public class CsvData
+    public class SensorRecord
     {
         public string DeviceId { get; set; }
         public DateTime Timestamp { get; set; }

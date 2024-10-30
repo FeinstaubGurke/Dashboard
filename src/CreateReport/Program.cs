@@ -17,7 +17,7 @@ var jsonSerializerOptions = new JsonSerializerOptions
     PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
 };
 
-
+Console.WriteLine("Get Sensor Informations");
 using var httpClient = new HttpClient();
 var sensors = await httpClient.GetFromJsonAsync<Sensor[]>("https://feinstaubgurke.at/sensor");
 if (sensors == null)
@@ -26,15 +26,16 @@ if (sensors == null)
     return;
 }
 
-var records = new List<CsvData>();
+var records = new List<SensorRecord>();
 
+Console.WriteLine("Load webhook data");
 var files = Directory.GetFiles(sensorDataPath);
 foreach (var file in files)
 {
     var jsonData = File.ReadAllBytes(file);
     var uplinkMessageWebhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(jsonData, jsonSerializerOptions);
 
-    records.Add(new CsvData
+    records.Add(new SensorRecord
     {
         DeviceId = uplinkMessageWebhook.EndDeviceIds.DeviceId,
         Timestamp = uplinkMessageWebhook.ReceivedAt,
@@ -43,26 +44,34 @@ foreach (var file in files)
     });
 }
 
-var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o => new DeviceInfo
+Console.WriteLine("Group data");
+var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
 {
-    DeviceId = o.Key,
-    Name = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => sensor.Name).FirstOrDefault(),
-    City = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => sensor.City).FirstOrDefault(),
-    District = sensors.Where(sensor => sensor.DeviceId == o.Key).Select(sensor => sensor.District).FirstOrDefault(),
-    Data = o.ToList(),
-    HourlyStatisticData = [..CreateStatistic(o.ToList(), csvData => csvData.PM2_5)]
+    var sensor = sensors.Where(sensor => sensor.DeviceId == o.Key);
+    var sensorRecords = o.ToList();
+
+    return new DeviceInfo
+    {
+        DeviceId = o.Key,
+        Name = sensor.Select(sensor => sensor.Name).FirstOrDefault(),
+        City = sensor.Select(sensor => sensor.City).FirstOrDefault(),
+        District = sensor.Select(sensor => sensor.District).FirstOrDefault(),
+        Data = sensorRecords,
+        HourlyPM2_5StatisticData = [.. CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)]
+    };
 }).ToList();
 
+Console.WriteLine("Create pdf report");
 using var pdfHelper = new PdfHelper();
 pdfHelper.CreateReport(groupedDataByDeviceId.ToArray());
 
-var groupedDataByDeviceId1 = records.GroupBy(o => new { o.DeviceId, o.Timestamp.Date }).Select(o => new
-{
-    DeviceId = o.Key.DeviceId,
-    Date = o.Key.Date,
-    PM1 = o.Select(o => o.PM1).Average(),
-    PM2_5 = o.Select(o => o.PM2_5).Average()
-});
+//var groupedDataByDeviceId1 = records.GroupBy(o => new { o.DeviceId, o.Timestamp.Date }).Select(o => new
+//{
+//    DeviceId = o.Key.DeviceId,
+//    Date = o.Key.Date,
+//    PM1 = o.Select(o => o.PM1).Average(),
+//    PM2_5 = o.Select(o => o.PM2_5).Average()
+//});
 
 Console.WriteLine("Average Values by Date and Device");
 foreach (var data in groupedDataByDeviceId)
@@ -81,7 +90,7 @@ foreach (var data in groupedDataByDeviceId)
 //}
 
 
-static IEnumerable<HourlyStatisticData> CreateStatistic(List<CsvData> records, Func<CsvData, double?> field)
+static IEnumerable<HourlyStatisticData> CreateStatistic(List<SensorRecord> records, Func<SensorRecord, double?> field)
 {
     return records.GroupBy(o => new { o.Timestamp.Date, o.Timestamp.Hour }).Select(o =>
     {
