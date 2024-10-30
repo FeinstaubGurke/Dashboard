@@ -26,14 +26,14 @@ if (sensors == null)
     return;
 }
 
-var records = new List<SensorRecord>();
-
 Console.Write("Load webhook data from filesystem");
 var i = 0;
 var files = Directory.GetFiles(sensorDataPath);
+var records = new List<SensorRecord>(files.Length);
+
 foreach (var file in files)
 {
-    var jsonData = File.ReadAllBytes(file);
+    var jsonData = await File.ReadAllBytesAsync(file);
     var uplinkMessageWebhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(jsonData, jsonSerializerOptions);
 
     records.Add(new SensorRecord
@@ -66,7 +66,8 @@ var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
         City = sensor.Select(sensor => sensor.City).FirstOrDefault(),
         District = sensor.Select(sensor => sensor.District).FirstOrDefault(),
         Data = sensorRecords,
-        HourlyPM2_5StatisticData = [.. CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)]
+        HourlyPM2_5StatisticData = [.. CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
+        HourGroupPM2_5StatisticData = [.. CreateStatistic1(sensorRecords, sensorRecord => sensorRecord.PM2_5)]
     };
 }).ToList();
 
@@ -120,6 +121,26 @@ static IEnumerable<HourlyStatisticData> CreateStatistic(List<SensorRecord> recor
             Satisfactory = satisfactory / recordsInThisHour,
             Poor = poor / recordsInThisHour,
             VeryPoor = veryPoor / recordsInThisHour,
+        };
+    });
+}
+
+static int GetHourGroup(int hour)
+{
+    return hour / 2;
+}
+
+static IEnumerable<DayStatisticData> CreateStatistic1(List<SensorRecord> records, Func<SensorRecord, double?> field)
+{
+    return records.GroupBy(o => new { o.Timestamp.Date, Group = GetHourGroup(o.Timestamp.Hour) }).Select(o =>
+    {
+        var hourGroupAverage = o.Select(x => field(x)).Average();
+
+        return new DayStatisticData
+        {
+            Date = DateOnly.FromDateTime(o.Key.Date),
+            HourGroup = o.Key.Group,
+            Average = hourGroupAverage
         };
     });
 }

@@ -94,7 +94,10 @@ namespace CreateReport
                 }
 
                 var dataPoints = deviceInfo.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
-                this.DrawHourGraphic(page, 220, dataPoints, 200, pagePadding);
+                var dataPoints2 = deviceInfo.HourGroupPM2_5StatisticData.OrderBy(o => o.Date).ToArray();
+
+                this.DrawHourGraphic(page, 220, dataPoints, 170, pagePadding);
+                this.DrawDayGraphic(page, 450, dataPoints2, 80, pagePadding);
             }
 
             var fileBytes = this._pdfDocumentBuilder.Build();
@@ -117,9 +120,6 @@ namespace CreateReport
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
             page.AddText("Tagesverlauf", 12, drawInitPosition.MoveY(10), this._headlineFont);
-
-            var positionX = 0.0;
-            var positionY = page.PageSize.Top - positionShiftY;
             var lastDayPositionX = 0.0;
 
             for (var i = 0; i < dataPoints.Length; i++)
@@ -132,7 +132,7 @@ namespace CreateReport
                     nextDay = true;
                 }
 
-                positionX = i * chartElementWidth;
+                double positionX = i * chartElementWidth;
                 var position = drawInitPosition.Translate(positionX, -chartElementHeight);
 
                 var chartElementVeryGoodHeight = chartElementHeight * dataPoint.VeryGood;
@@ -192,6 +192,80 @@ namespace CreateReport
 
             var legendInformations = new[]
             { 
+                new { Text = "Sehr gut", Color = DrawColor.Green },
+                new { Text = "Gut", Color = DrawColor.DarkGreen },
+                new { Text = "Befriedigend", Color = DrawColor.Yellow },
+                new { Text = "Schlecht", Color = DrawColor.Red },
+                new { Text = "Sehr schlecht", Color = DrawColor.DarkRed },
+            };
+
+            var legendBasePosition = drawInitPosition.MoveY(-chartElementHeight - 25);
+
+            foreach (var legend in legendInformations)
+            {
+                this.SetColor(page, legend.Color);
+                page.DrawRectangle(legendBasePosition, 10, 10, fill: true);
+                this.SetColor(page, DrawColor.Black);
+                page.AddText(legend.Text, 6, legendBasePosition.Translate(12, 2), font);
+
+                legendBasePosition = legendBasePosition.MoveX(50);
+            }
+
+            #endregion
+
+            this.SetColor(page, DrawColor.Black);
+        }
+
+        private void DrawDayGraphic(
+            PdfPageBuilder page,
+            int positionShiftY,
+            DayStatisticData[] dataPoints,
+            int chartElementHeight = 200,
+            double pagePadding = 10)
+        {
+            var font = this._defaultFont;
+            var dayInfoPositionShiftY = 0;
+
+            var pageWidth = page.PageSize.Width - (pagePadding * 2);
+
+            var test = dataPoints.GroupBy(o => o.Date).Select(o => new { Date = o.Key, Data = o.ToList() }).ToArray();
+
+            var chartElementWidth = pageWidth / test.Length;
+
+            var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
+            this.SetColor(page, DrawColor.Black);
+            page.AddText("Tagesverlauf", 12, drawInitPosition.MoveY(10), this._headlineFont);
+
+            var blockHeight = chartElementHeight / 12;
+
+            for (var i = 0; i < test.Length; i++)
+            {
+                var dataPoint = test[i];
+
+                double positionX = i * chartElementWidth;
+                var position = drawInitPosition.Translate(positionX, -chartElementHeight);
+
+                for (var j = 0; j < dataPoint.Data.Count; j++)
+                {
+                    var hourGroup = dataPoint.Data[j].HourGroup;
+                    var x = dataPoint.Data[j].Average;
+
+                    this.SetColor(page, this.GetColorFromMeasurement(x ?? 0));
+                    page.DrawRectangle(position.MoveY(hourGroup * blockHeight), chartElementWidth, blockHeight, 0.1, fill: true);
+                }
+
+
+                #region Draw Day Info
+
+                this.DrawDayBox(page, dataPoint.Date, position.Translate(0, -dayInfoPositionShiftY), chartElementWidth);
+
+                #endregion
+            }
+
+            #region Draw Legend
+
+            var legendInformations = new[]
+            {
                 new { Text = "Sehr gut", Color = DrawColor.Green },
                 new { Text = "Gut", Color = DrawColor.DarkGreen },
                 new { Text = "Befriedigend", Color = DrawColor.Yellow },

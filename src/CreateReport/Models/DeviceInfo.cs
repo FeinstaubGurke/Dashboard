@@ -8,5 +8,6 @@
         public string? District { get; set; }
         public List<SensorRecord> Data { get; set; }
         public HourlyStatisticData[] HourlyPM2_5StatisticData { get; set; }
+        public DayStatisticData[] HourGroupPM2_5StatisticData { get; set; }
     }
 }
