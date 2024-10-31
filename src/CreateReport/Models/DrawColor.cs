@@ -4,6 +4,7 @@
     {
         Black,
         Gray,
+        LightGray,
         Green,
         DarkGreen,
         Yellow,

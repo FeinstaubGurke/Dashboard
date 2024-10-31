@@ -1,4 +1,5 @@
 ﻿using CreateReport.Models;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Writer;
@@ -18,7 +19,7 @@ namespace CreateReport
             this._pdfDocumentBuilder = new PdfDocumentBuilder
             {
                 ArchiveStandard = PdfAStandard.A1A,
-                DocumentInformation = new PdfDocumentBuilder.DocumentInformationBuilder
+                DocumentInformation = new DocumentInformationBuilder
                 {
                     Title = "Feinstaubgurke Report"
                 }
@@ -69,26 +70,39 @@ namespace CreateReport
 
                 page.AddText("Tagesmittelwert", 12, pageTop.Translate(pagePadding, -120), this._headlineFont);
 
-                var dailyAverageValues = deviceInfo.Data.GroupBy(o => o.Timestamp.Date).Select(o => new { Date = o.Key, AveragePm2_5 = o.Average(o => o.PM2_5) });
+                var dailyValues = deviceInfo.Data.GroupBy(o => o.Timestamp.Date).Select(o => new
+                {
+                    Date = o.Key,
+                    AveragePm2_5 = o.Average(o => o.PM2_5),
+                    MinimumPm2_5 = o.Min(o => o.PM2_5),
+                    MaximumPm2_5 = o.Max(o => o.PM2_5)
+                });
 
                 var position1 = pageTop.Translate(pagePadding, -180);
                 var boxWidth = 80;
                 var boxHeight = 50;
 
-                foreach (var dayAverage in dailyAverageValues)
+                foreach (var dailyValue in dailyValues)
                 {
-                    if (dayAverage.AveragePm2_5 == null)
+                    if (dailyValue.AveragePm2_5 == null)
                     {
                         continue;
                     }
 
-                    var color = this.GetColorFromMeasurement(dayAverage.AveragePm2_5.Value);
+                    var color = this.GetColorFromMeasurement(dailyValue.AveragePm2_5.Value);
 
                     this.SetColor(page, color);
-                    page.DrawRectangle(position1, boxWidth, boxHeight, fill: true);
+                    page.DrawRectangle(position1, boxWidth, boxHeight, lineWidth: 0.1, fill: true);
                     this.SetColor(page, DrawColor.Black);
-                    page.AddText($"{dayAverage.Date:dd.MM.yyyy}", 9, position1.Translate(5, 20), this._headlineFont);
-                    page.AddText($"{dayAverage.AveragePm2_5:0.00}", 10, position1.Translate(5, 10), this._defaultFont);
+                    page.AddText($"{dailyValue.AveragePm2_5:0.00}", 16, position1.Translate(18, 22), this._headlineFont);
+
+                    page.AddText($"Min: {dailyValue.MinimumPm2_5:0}", 7, position1.Translate(5, 10), this._defaultFont);
+                    page.AddText($"Max: {dailyValue.MaximumPm2_5:0}", 7, position1.Translate(36, 10), this._defaultFont);
+
+                    this.SetColor(page, DrawColor.LightGray);
+                    page.DrawRectangle(position1.MoveY(-15), boxWidth, 15, lineWidth: 0.1, fill: true);
+                    this.SetColor(page, DrawColor.Gray);
+                    page.AddText($"{dailyValue.Date:dd.MM.yyyy}", 7, position1.Translate(5, -10), this._defaultFont);
 
                     position1 = position1.MoveX(boxWidth);
                 }
@@ -96,8 +110,11 @@ namespace CreateReport
                 var dataPoints = deviceInfo.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
                 var dataPoints2 = deviceInfo.HourGroupPM2_5StatisticData.OrderBy(o => o.Date).ToArray();
 
-                this.DrawHourGraphic(page, 220, dataPoints, 170, pagePadding);
+                this.DrawHourGraphic(page, 240, dataPoints, 170, pagePadding);
                 this.DrawDayGraphic(page, 450, dataPoints2, 80, pagePadding);
+
+
+                this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 260, page.PageSize.Top - 50));
             }
 
             var fileBytes = this._pdfDocumentBuilder.Build();
@@ -188,31 +205,6 @@ namespace CreateReport
 
             #endregion
 
-            #region Draw Legend
-
-            var legendInformations = new[]
-            { 
-                new { Text = "Sehr gut", Color = DrawColor.Green },
-                new { Text = "Gut", Color = DrawColor.DarkGreen },
-                new { Text = "Befriedigend", Color = DrawColor.Yellow },
-                new { Text = "Schlecht", Color = DrawColor.Red },
-                new { Text = "Sehr schlecht", Color = DrawColor.DarkRed },
-            };
-
-            var legendBasePosition = drawInitPosition.MoveY(-chartElementHeight - 25);
-
-            foreach (var legend in legendInformations)
-            {
-                this.SetColor(page, legend.Color);
-                page.DrawRectangle(legendBasePosition, 10, 10, fill: true);
-                this.SetColor(page, DrawColor.Black);
-                page.AddText(legend.Text, 6, legendBasePosition.Translate(12, 2), font);
-
-                legendBasePosition = legendBasePosition.MoveX(50);
-            }
-
-            #endregion
-
             this.SetColor(page, DrawColor.Black);
         }
 
@@ -224,13 +216,15 @@ namespace CreateReport
             double pagePadding = 10)
         {
             var font = this._defaultFont;
-            var dayInfoPositionShiftY = 0;
-
             var pageWidth = page.PageSize.Width - (pagePadding * 2);
 
-            var test = dataPoints.GroupBy(o => o.Date).Select(o => new { Date = o.Key, Data = o.ToList() }).ToArray();
+            var items = dataPoints.GroupBy(o => o.Date).Select(o => new
+            {
+                Date = o.Key,
+                Data = o.ToList()
+            }).ToArray();
 
-            var chartElementWidth = pageWidth / test.Length;
+            var chartElementWidth = pageWidth / items.Length;
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
@@ -238,30 +232,36 @@ namespace CreateReport
 
             var blockHeight = chartElementHeight / 12;
 
-            for (var i = 0; i < test.Length; i++)
+            for (var i = 0; i < items.Length; i++)
             {
-                var dataPoint = test[i];
+                var dataPoint = items[i];
 
                 double positionX = i * chartElementWidth;
-                var position = drawInitPosition.Translate(positionX, -chartElementHeight);
+                var position = drawInitPosition.Translate(positionX, 0);
 
                 for (var j = 0; j < dataPoint.Data.Count; j++)
                 {
                     var hourGroup = dataPoint.Data[j].HourGroup;
-                    var x = dataPoint.Data[j].Average;
+                    var average = dataPoint.Data[j].Average;
 
-                    this.SetColor(page, this.GetColorFromMeasurement(x ?? 0));
-                    page.DrawRectangle(position.MoveY(hourGroup * blockHeight), chartElementWidth, blockHeight, 0.1, fill: true);
+                    this.SetColor(page, this.GetColorFromMeasurement(average ?? 0));
+                    page.DrawRectangle(position.MoveY(-(hourGroup * blockHeight)), chartElementWidth, blockHeight, 0.1, fill: true);
                 }
-
 
                 #region Draw Day Info
 
-                this.DrawDayBox(page, dataPoint.Date, position.Translate(0, -dayInfoPositionShiftY), chartElementWidth);
+                this.DrawDayBox(page, dataPoint.Date, position.Translate(0, -(chartElementHeight - 14)), chartElementWidth);
 
                 #endregion
             }
 
+            this.SetColor(page, DrawColor.Black);
+        }
+
+        private void DrawLegend(
+            PdfPageBuilder page,
+            PdfPoint drawPosition)
+        {
             #region Draw Legend
 
             var legendInformations = new[]
@@ -273,21 +273,27 @@ namespace CreateReport
                 new { Text = "Sehr schlecht", Color = DrawColor.DarkRed },
             };
 
-            var legendBasePosition = drawInitPosition.MoveY(-chartElementHeight - 25);
+            var legendBasePosition = drawPosition;
+
+            var legendBoxWidth = 10;
+            var legendBoxHeight = 10;
+            var fontSize = 6;
 
             foreach (var legend in legendInformations)
             {
-                this.SetColor(page, legend.Color);
-                page.DrawRectangle(legendBasePosition, 10, 10, fill: true);
-                this.SetColor(page, DrawColor.Black);
-                page.AddText(legend.Text, 6, legendBasePosition.Translate(12, 2), font);
+                var textPosition = legendBasePosition.Translate(legendBoxWidth + 4, 2);
 
-                legendBasePosition = legendBasePosition.MoveX(50);
+                this.SetColor(page, legend.Color);
+                page.DrawRectangle(legendBasePosition, legendBoxWidth, legendBoxHeight, fill: true);
+
+                this.SetColor(page, DrawColor.Black);
+                page.AddText(legend.Text, fontSize, textPosition, this._defaultFont);
+                var letterInfos = page.MeasureText(legend.Text, fontSize, textPosition, this._defaultFont);
+                var textWidth = this.GetTextWidth(letterInfos);
+                legendBasePosition = legendBasePosition.MoveX(textWidth + 20);
             }
 
             #endregion
-
-            this.SetColor(page, DrawColor.Black);
         }
 
         private DrawColor GetColorFromMeasurement(double measurement)
@@ -326,7 +332,10 @@ namespace CreateReport
                     page.SetTextAndFillColor(0, 0, 0);
                     break;
                 case DrawColor.Gray:
-                    page.SetTextAndFillColor(10, 10, 10);
+                    page.SetTextAndFillColor(50, 50, 50);
+                    break;
+                case DrawColor.LightGray:
+                    page.SetTextAndFillColor(240, 240, 240);
                     break;
                 case DrawColor.Green:
                     page.SetTextAndFillColor(13, 205, 45);
@@ -361,10 +370,15 @@ namespace CreateReport
             var pageCenter = new PdfPoint(page.PageSize.Width / 2, page.PageSize.Top / 2);
 
             var letterInfos = page.MeasureText(text, fontSize, pageCenter, font);
+            var textWidth = this.GetTextWidth(letterInfos);
+            page.AddText(text, fontSize, pageCenter.Translate(-(textWidth / 2), shiftY), font);
+        }
+
+        private double GetTextWidth(IReadOnlyList<Letter> letterInfos)
+        {
             var startPosition = letterInfos.Select(letterInfo => letterInfo.Location.X).Min();
             var endPosition = letterInfos.Select(letterInfo => letterInfo.EndBaseLine.X).Max();
-            var textWidth = endPosition - startPosition;
-            page.AddText(text, fontSize, pageCenter.Translate(-(textWidth / 2), shiftY), font);
+            return endPosition - startPosition;
         }
 
         private void DrawDayBox(
@@ -378,7 +392,7 @@ namespace CreateReport
 
             var drawPosition = pdfPoint.Translate(0, -height);
 
-            page.SetTextAndFillColor(240, 240, 240); //Light Gray
+            this.SetColor(page, DrawColor.LightGray);
             page.DrawRectangle(drawPosition, width, height, lineWidth: 0, fill: true);
             this.SetColor(page, DrawColor.Gray);
             page.AddText($"{date:ddd dd.MM.yyyy}", 6, pdfPoint.Translate(2, -(fontSize + 1)), this._defaultFont);
