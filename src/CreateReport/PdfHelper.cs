@@ -74,10 +74,12 @@ namespace CreateReport
                     AveragePm2_5 = o.Average(o => o.PM2_5),
                     MinimumPm2_5 = o.Min(o => o.PM2_5),
                     MaximumPm2_5 = o.Max(o => o.PM2_5)
-                });
+                }).ToArray();
 
                 var position1 = pageTop.Translate(pagePadding, -180);
-                var boxWidth = 80;
+
+                var pageWidth = page.PageSize.Width - (pagePadding * 2);
+                var boxWidth = pageWidth / dailyValues.Length;
                 var boxHeight = 50;
 
                 foreach (var dailyValue in dailyValues)
@@ -112,7 +114,7 @@ namespace CreateReport
                 this.DrawDayGraphic(page, 450, dataPoints2, 80, pagePadding);
 
 
-                this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 260, page.PageSize.Top - 50));
+                this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 300, page.PageSize.Top - 50));
             }
 
             var fileBytes = this._pdfDocumentBuilder.Build();
@@ -226,7 +228,7 @@ namespace CreateReport
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
-            page.AddText("Tagesverlauf", 12, drawInitPosition.MoveY(10), this._headlineFont);
+            page.AddText("Tagesverlauf (2 Stunden pro Block)", 12, drawInitPosition.MoveY(10), this._headlineFont);
 
             var blockHeight = chartElementHeight / 12;
 
@@ -269,6 +271,7 @@ namespace CreateReport
                 new { Text = "Befriedigend", Color = DrawColor.Yellow },
                 new { Text = "Schlecht", Color = DrawColor.Red },
                 new { Text = "Sehr schlecht", Color = DrawColor.DarkRed },
+                new { Text = "Grenzwert", Color = DrawColor.Purple }
             };
 
             var legendBasePosition = drawPosition;
