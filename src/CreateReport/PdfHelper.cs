@@ -1,9 +1,7 @@
 ﻿using CreateReport.Models;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Writer;
-using static System.Net.Mime.MediaTypeNames;
 using static UglyToad.PdfPig.Writer.PdfDocumentBuilder;
 
 namespace CreateReport
