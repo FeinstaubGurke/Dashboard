@@ -26,6 +26,8 @@ if (sensors == null)
     return;
 }
 
+var sensorMapping = sensors.ToDictionary(o => o.DeviceId, o => o);
+
 Console.Write("Load webhook data from filesystem");
 var i = 0;
 var files = Directory.GetFiles(sensorDataPath);
@@ -36,12 +38,32 @@ foreach (var file in files)
     var jsonData = await File.ReadAllBytesAsync(file);
     var uplinkMessageWebhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(jsonData, jsonSerializerOptions);
 
+    if (uplinkMessageWebhook == null)
+    {
+        continue;
+    }
+
+    var deviceId = uplinkMessageWebhook.EndDeviceIds.DeviceId;
+    if (string.IsNullOrWhiteSpace(deviceId))
+    {
+        continue;
+    }
+
+    sensorMapping.TryGetValue(deviceId, out var sensor);
+    sensor ??= new Sensor();
+
     records.Add(new SensorRecord
     {
-        DeviceId = uplinkMessageWebhook.EndDeviceIds.DeviceId,
+        DeviceId = deviceId,
+        City = sensor.City,
+        District = sensor.District,
         Timestamp = uplinkMessageWebhook.ReceivedAt,
         PM1 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM1,
-        PM2_5 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM2_5
+        PM2_5 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM2_5,
+        PM4 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM4,
+        PM10 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM10,
+        Humidity = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.Humidity,
+        Temperature = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.Temperature
     });
 
     i++;
@@ -51,20 +73,29 @@ foreach (var file in files)
         Console.Write(".");
     }
 }
+
 Console.WriteLine("");
+
+using (var writer = new StreamWriter("report.csv"))
+using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
+{
+    csv.WriteRecords(records);
+}
 
 Console.WriteLine("Group data");
 var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
 {
-    var sensor = sensors.Where(sensor => sensor.DeviceId == o.Key);
+    sensorMapping.TryGetValue(o.Key, out var sensor);
+    sensor ??= new Sensor();
+
     var sensorRecords = o.ToList();
 
     return new DeviceInfo
     {
         DeviceId = o.Key,
-        Name = sensor.Select(sensor => sensor.Name).FirstOrDefault(),
-        City = sensor.Select(sensor => sensor.City).FirstOrDefault(),
-        District = sensor.Select(sensor => sensor.District).FirstOrDefault(),
+        Name = sensor.Name,
+        City = sensor.City,
+        District = sensor.District,
         Data = sensorRecords,
         HourlyPM2_5StatisticData = [.. CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
         HourGroupPM2_5StatisticData = [.. CreateStatistic1(sensorRecords, sensorRecord => sensorRecord.PM2_5)]
@@ -74,30 +105,6 @@ var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
 Console.WriteLine("Create pdf report");
 using var pdfHelper = new PdfHelper();
 pdfHelper.CreateReport(groupedDataByDeviceId.ToArray());
-
-//var groupedDataByDeviceId1 = records.GroupBy(o => new { o.DeviceId, o.Timestamp.Date }).Select(o => new
-//{
-//    DeviceId = o.Key.DeviceId,
-//    Date = o.Key.Date,
-//    PM1 = o.Select(o => o.PM1).Average(),
-//    PM2_5 = o.Select(o => o.PM2_5).Average()
-//});
-
-//Console.WriteLine("Average Values by Date and Device");
-//foreach (var data in groupedDataByDeviceId)
-//{
-//    var pm2_5GroupedByDate = data.Data.GroupBy(o => o.Timestamp.Date).Select(o => new { Date = o.Key, AvgPm2_5 = o.Average(o => o.PM2_5) });
-//    foreach (var m in pm2_5GroupedByDate)
-//    {
-//        Console.WriteLine($"{data.DeviceId} {m.Date:yyyy-MM-dd} {m.AvgPm2_5:0.00}");
-//    }
-//}
-
-//using (var writer = new StreamWriter("report.csv"))
-//using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
-//{
-//    csv.WriteRecords(records);
-//}
 
 
 static IEnumerable<HourlyStatisticData> CreateStatistic(List<SensorRecord> records, Func<SensorRecord, double?> field)

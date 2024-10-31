@@ -38,8 +38,9 @@ namespace CreateReport
 
             var coverPage = this._pdfDocumentBuilder.AddPage(PageSize.A4);
 
-            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50, font: this._headlineFont);
-            this.DrawCenterText(coverPage, "Analyse und Visualisierung der Feinstaubbelastung", fontSize: 20, font: this._defaultFont, shiftY: -40);
+            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50, font: this._headlineFont, shiftY: 200);
+            this.DrawCenterText(coverPage, "Analyse und Visualisierung der Feinstaubbelastung", fontSize: 20, font: this._defaultFont, shiftY: 160);
+            this.DrawCenterText(coverPage, "https://www.consilium.europa.eu/de/infographics/air-pollution-in-the-eu", fontSize: 10, font: this._defaultFont, shiftY: 140);
 
             #endregion
 
@@ -192,8 +193,11 @@ namespace CreateReport
 
                 #region Draw Hour
 
-                page.SetTextAndFillColor(100, 100, 100);
-                page.AddText($"{dataPoint.Hour}", 3, position.MoveY(chartElementHeight + 2), font);
+                if (dataPoint.Hour % 2 == 0)
+                {
+                    page.SetTextAndFillColor(100, 100, 100);
+                    page.AddText($"{dataPoint.Hour}", 3, position.MoveY(chartElementHeight + 2), font);
+                }
 
                 #endregion
             }
