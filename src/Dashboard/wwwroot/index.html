@@ -97,7 +97,7 @@
             position: absolute;
             right: 0px;
             top: 0px;
-            width: 70px;
+            width: 80px;
             height: 100%;
             text-align: center;
             background-color: #042940;
@@ -146,12 +146,10 @@
                     </div>
                 </div>
                 <div class="sensordetail">
-                    <strong>{{ item.name }}</strong>
+                    <strong>{{ sensorName(item) }}</strong>
                     <div style="font-size:0.9rem;">
-                        <div v-if="item.description">{{ item.description }}</div>
-                        <div v-if="item.city">
-                            {{ item.city }} | {{ item.district }}
-                        </div>
+                        <template v-if="item.description">{{ item.description }}</template>
+                        <div>{{ item.name }}</div>
                     </div>
                     <div style="margin-top:6px;">
                         <template v-if="item.lastSignalReceivedTime">
@@ -231,6 +229,26 @@
                     return Math.round(seconds);
                 }
 
+                const sensorName = (sensorInfo) => {
+                    let name = ''
+                    if (sensorInfo.city) {
+                        name += sensorInfo.city.replace('-', '')
+                    }
+
+                    if (sensorInfo.district) {
+                        if (name.length > 0) {
+                            name += ' - '
+                        }
+                        name += sensorInfo.district.replace('-', '')
+                    }
+
+                    if (name.length === 0) {
+                        name += sensorInfo.name
+                    }
+
+                    return name
+                }
+
                 const lastSignalFormatted = (date) => {
                     return new Date(date).toLocaleString('de-DE', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 }
@@ -244,6 +262,7 @@
 
                 return {
                     sensors,
+                    sensorName,
                     lastSignalInMinutes,
                     lastSignalFormatted
                 }
