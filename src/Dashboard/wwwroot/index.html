@@ -155,11 +155,11 @@
                         <template v-if="item.lastSignalReceivedTime">
                             {{ lastSignalInMinutes(item.lastSignalReceivedTime) }} minutes ago
                         </template>
-                        <br />
-                        <small>Last Signal Received: {{ lastSignalFormatted(item.lastSignalReceivedTime) }}</small>
                         <template v-else>
                             -
                         </template>
+                        <br />
+                        <small>Last Signal Received: {{ lastSignalFormatted(item.lastSignalReceivedTime) }}</small>
                     </div>
                     <div style="margin-top:6px;">
                         {{ item.status }}<br />
