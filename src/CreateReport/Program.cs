@@ -28,67 +28,52 @@ if (sensors == null)
 
 var sensorMapping = sensors.ToDictionary(o => o.DeviceId, o => o);
 
-Console.Write("Load webhook data from filesystem");
-var i = 0;
-var files = Directory.GetFiles(sensorDataPath);
-var records = new List<SensorRecord>(files.Length);
+var dataProcessor = new DataProcessor();
 
-foreach (var file in files)
+foreach (var sensor in sensors)
 {
-    var jsonData = await File.ReadAllBytesAsync(file);
-    var uplinkMessageWebhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(jsonData, jsonSerializerOptions);
+    var records1 = await dataProcessor.SummarizeDataAsync(sensor, sensorDataPath);
+    Console.WriteLine(records1.Count);
 
-    if (uplinkMessageWebhook == null)
+    var groupedDayRecords = records1.GroupBy(o => o.Timestamp.Date).Select(o => new { Key = o.Key, Items = o.ToList() });
+
+    foreach (var dayRecords in groupedDayRecords)
     {
-        continue;
-    }
-
-    var deviceId = uplinkMessageWebhook.EndDeviceIds.DeviceId;
-    if (string.IsNullOrWhiteSpace(deviceId))
-    {
-        continue;
-    }
-
-    sensorMapping.TryGetValue(deviceId, out var sensor);
-    sensor ??= new Sensor();
-
-    records.Add(new SensorRecord
-    {
-        DeviceId = deviceId,
-        City = sensor.City,
-        District = sensor.District,
-        Timestamp = uplinkMessageWebhook.ReceivedAt,
-        PM1 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM1,
-        PM2_5 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM2_5,
-        PM4 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM4,
-        PM10 = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.PM10,
-        Humidity = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.Humidity,
-        Temperature = uplinkMessageWebhook.UplinkMessage.DecodedPayload.Decoded.Temperature
-    });
-
-    i++;
-
-    if (i % 1000 == 0)
-    {
-        Console.Write(".");
+        var dayData = JsonSerializer.Serialize(dayRecords.Items);
+        await File.WriteAllTextAsync(Path.Combine(sensorDataPath, $"{sensor.DeviceId}-{dayRecords.Key:yyyy-MM-dd}.json"), dayData);
     }
 }
 
-Console.WriteLine("");
 
+var files = Directory.GetFiles(sensorDataPath);
+var records = new List<SensorRecord>();
+Console.Write("Load webhook data from filesystem");
+
+foreach (var file in files)
+{
+    var fileName = Path.GetFileNameWithoutExtension(file);
+    if (fileName.Contains('_'))
+    {
+        continue;
+    }
+
+    var jsonData = await File.ReadAllBytesAsync(file);
+    var sensorData = JsonSerializer.Deserialize<SensorRecord[]>(jsonData);
+    records.AddRange(sensorData);
+}
+
+Console.WriteLine("Export csv report");
 using (var writer = new StreamWriter("report.csv"))
 using (var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
 {
     csv.WriteRecords(records);
 }
 
-Console.WriteLine("Group data");
+Console.WriteLine("Group data for pdf report");
 var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
 {
-    sensorMapping.TryGetValue(o.Key, out var sensor);
-    sensor ??= new Sensor();
-
     var sensorRecords = o.ToList();
+    var sensor = sensorRecords.First();
 
     return new DeviceInfo
     {
@@ -98,13 +83,17 @@ var groupedDataByDeviceId = records.GroupBy(o => o.DeviceId).Select(o =>
         District = sensor.District,
         Data = sensorRecords,
         HourlyPM2_5StatisticData = [.. CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
-        HourGroupPM2_5StatisticData = [.. CreateStatistic1(sensorRecords, sensorRecord => sensorRecord.PM2_5)]
+        HourGroupPM2_5StatisticData = [.. CreateHourGroupStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)]
     };
-}).ToList();
+}).ToArray();
 
 Console.WriteLine("Create pdf report");
 using var pdfHelper = new PdfHelper();
-pdfHelper.CreateReport(groupedDataByDeviceId.ToArray());
+pdfHelper.CreateReport(groupedDataByDeviceId);
+
+
+
+
 
 
 static IEnumerable<HourlyStatisticData> CreateStatistic(List<SensorRecord> records, Func<SensorRecord, double?> field)
@@ -137,7 +126,7 @@ static int GetHourGroup(int hour)
     return hour / 2;
 }
 
-static IEnumerable<DayStatisticData> CreateStatistic1(List<SensorRecord> records, Func<SensorRecord, double?> field)
+static IEnumerable<DayStatisticData> CreateHourGroupStatistic(List<SensorRecord> records, Func<SensorRecord, double?> field)
 {
     return records.GroupBy(o => new { o.Timestamp.Date, Group = GetHourGroup(o.Timestamp.Hour) }).Select(o =>
     {
