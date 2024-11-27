@@ -32,10 +32,26 @@ namespace Dashboard.Services
 
         public void SetTryJoin(string deviceId)
         {
+            var status = "Try join";
+
+            this.UpdateStatus(deviceId, status);
+        }
+
+        public void SetOffline(string deviceId)
+        {
+            if (this._sensors.TryGetValue(deviceId, out var existingValue))
+            {
+                existingValue.Status = "unknown";
+                existingValue.IsReady = false;
+            }
+        }
+
+        private void UpdateStatus(string deviceId, string status)
+        {
             this._sensors.AddOrUpdate(deviceId, new Sensor
             {
                 DeviceId = deviceId,
-                Status = "Try join",
+                Status = status,
                 LastSignalReceivedTime = DateTime.UtcNow,
                 IsReady = false,
                 PM1 = null,
@@ -44,7 +60,7 @@ namespace Dashboard.Services
             },
             (key, existingValue) =>
             {
-                existingValue.Status = "Try join";
+                existingValue.Status = status;
                 existingValue.LastSignalReceivedTime = DateTime.UtcNow;
                 existingValue.IsReady = false;
                 existingValue.PM1 = null;
@@ -54,7 +70,7 @@ namespace Dashboard.Services
             });
         }
 
-        public void UpdateStatus(
+        public void UpdateSensorData(
             string deviceId,
             string txReason,
             double? pm1,

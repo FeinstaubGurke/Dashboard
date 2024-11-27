@@ -1,5 +1,7 @@
 using Dashboard.Clients;
+using Dashboard.Jobs;
 using Dashboard.Services;
+using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,21 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<TheThingsStackClient>();
 builder.Services.AddScoped<IObjectStorageService, S3ObjectStorageService>();
+
+builder.Services.AddQuartz(q => {
+    q.InterruptJobsOnShutdown = true;
+    q.InterruptJobsOnShutdownWithWait = true;
+
+    q.AddJob<SensorInactivityCheckJob>(opts => opts.WithIdentity(JobKeys.SensorInactivityCheck));
+
+    q.AddTrigger(opts => opts
+        .ForJob(JobKeys.SensorInactivityCheck)
+        .WithIdentity($"{nameof(SensorInactivityCheckJob)}-trigger")
+        .StartAt(new DateTimeOffset(DateTime.UtcNow.AddSeconds(30)))
+        .WithSimpleSchedule(o => o.WithIntervalInMinutes(30).RepeatForever())
+    );
+});
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
 builder.Services.AddControllers();
 

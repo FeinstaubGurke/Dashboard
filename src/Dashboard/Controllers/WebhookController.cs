@@ -60,7 +60,7 @@ namespace Dashboard.Controllers
 
             this._logger.LogInformation($"{nameof(UplinkMessage)} - {webhook.EndDeviceIds.DeviceId} Sensormodus:{webhook.UplinkMessage.DecodedPayload.Decoded.Sensormodus} TxReason:{webhook.UplinkMessage.DecodedPayload.Decoded.TxReason}");
 
-            this._sensorService.UpdateStatus(
+            this._sensorService.UpdateSensorData(
                 webhook.EndDeviceIds.DeviceId,
                 webhook.UplinkMessage.DecodedPayload.Decoded.TxReason,
                 webhook.UplinkMessage.DecodedPayload.Decoded.PM1,
