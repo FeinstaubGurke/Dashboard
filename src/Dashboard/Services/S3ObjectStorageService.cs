@@ -92,10 +92,27 @@ namespace Dashboard.Services
                 BucketName = this._bucketName,
                 Delimiter = "/",
                 Prefix = prefix,
+                
             };
 
-            var response = await client.ListObjectsV2Async(request, cancellationToken);
-            return response.S3Objects.Select(o => new FileInfoDto { Key = o.Key, LastModified = o.LastModified }).ToArray();
+            var fileInfos = new List<FileInfoDto>();
+            ListObjectsV2Response response;
+
+            do
+            {
+                response = await client.ListObjectsV2Async(request, cancellationToken);
+
+                fileInfos.AddRange(response.S3Objects.Select(o => new FileInfoDto
+                {
+                    Key = o.Key,
+                    LastModified = o.LastModified
+                }));
+
+                // Update the continuation token to get the next set of results
+                request.ContinuationToken = response.NextContinuationToken;
+            } while (response.IsTruncated);
+
+            return fileInfos.ToArray();
         }
 
         public async Task<bool> UploadFileAsync(string key, Stream stream, CancellationToken cancellationToken = default)

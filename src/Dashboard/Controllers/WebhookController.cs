@@ -31,7 +31,8 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("JoinAccept")]
-        public ActionResult JoinAccept([FromBody] JsonElement requestBody)
+        public ActionResult JoinAccept(
+            [FromBody] JsonElement requestBody)
         {
             var webhook = JsonSerializer.Deserialize<JoinAcceptWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook == null)
@@ -49,7 +50,8 @@ namespace Dashboard.Controllers
 
         [HttpPost]
         [Route("UplinkMessage")]
-        public async Task<ActionResult> UplinkMessage([FromBody] JsonElement requestBody)
+        public async Task<ActionResult> UplinkMessage(
+            [FromBody] JsonElement requestBody)
         {
             var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook == null)

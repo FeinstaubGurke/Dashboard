@@ -23,7 +23,9 @@ namespace Dashboard.Controllers
         [Route("")]
         public ActionResult<Sensor[]> Sensors()
         {
-            return StatusCode(StatusCodes.Status200OK, this._sensorService.GetSensors());
+            var sensors = this._sensorService.GetSensors();
+
+            return StatusCode(StatusCodes.Status200OK, sensors);
         }
     }
 }

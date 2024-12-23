@@ -1,13 +1,8 @@
-﻿using Dashboard.Models.Webhooks;
+﻿using CreateReport.Models;
 using Dashboard.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using CreateReport.Models;
+using Dashboard.Models.Webhooks;
 using System.Globalization;
+using System.Text.Json;
 
 namespace CreateReport
 {
