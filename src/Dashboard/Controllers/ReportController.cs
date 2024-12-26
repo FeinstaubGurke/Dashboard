@@ -51,10 +51,6 @@ namespace Dashboard.Controllers
 
                         sensorRecords.AddRange(sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
                         {
-                            DeviceId = sensor.DeviceId,
-                            Name = sensor.Name,
-                            City = sensor.City,
-                            District = sensor.District,
                             Timestamp = o.Timestamp,
                             PM1 = o.PM1,
                             PM2_5 = o.PM2_5,
@@ -63,15 +59,13 @@ namespace Dashboard.Controllers
                             Humidity = o.Humidity,
                             Temperature = o.Temperature
                         }).ToArray());
-
-                        this._logger.LogInformation(sensorDayData.SensorDetailRecords.Length.ToString());
                     }
                     catch (Exception exception)
                     {
+                        this._logger.LogInformation($"{nameof(CreateReportAsync)} - Cannot get sensor data for {sensor.DeviceId}");
                         break;
                     }
                 }
-
 
                 items.Add(new DeviceInfo
                 {
@@ -80,12 +74,10 @@ namespace Dashboard.Controllers
                     City = sensor.City,
                     District = sensor.District,
                     Data = sensorRecords,
-                    HourlyPM2_5StatisticData = [.. DataHelper.CreateStatistic(sensorRecords.ToList(), sensorRecord => sensorRecord.PM2_5)],
-                    HourGroupPM2_5StatisticData = [.. DataHelper.CreateHourGroupStatistic(sensorRecords.ToList(), sensorRecord => sensorRecord.PM2_5)],
+                    HourlyPM2_5StatisticData = [.. DataHelper.CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
+                    HourGroupPM2_5StatisticData = [.. DataHelper.CreateHourGroupStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
                 });
             }
-
-
 
             using var processor = new PdfProcessor(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/pdf"));
             var fileData = processor.CreateReport(items.ToArray());

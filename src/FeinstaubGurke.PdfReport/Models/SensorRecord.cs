@@ -2,10 +2,6 @@
 {
     public class SensorRecord
     {
-        public string Name { get; set; }
-        public string City { get; set; }
-        public string District { get; set; }
-        public string DeviceId { get; set; }
         public DateTime Timestamp { get; set; }
         public double? PM1 { get; set; }
         public double? PM2_5 { get; set; }
