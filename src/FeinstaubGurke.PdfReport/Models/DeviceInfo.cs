@@ -1,4 +1,4 @@
-﻿namespace CreateReport.Models
+﻿namespace FeinstaubGurke.PdfReport.Models
 {
     public class DeviceInfo
     {

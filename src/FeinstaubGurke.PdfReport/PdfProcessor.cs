@@ -1,18 +1,18 @@
-﻿using CreateReport.Models;
+﻿using FeinstaubGurke.PdfReport.Models;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Writer;
 using static UglyToad.PdfPig.Writer.PdfDocumentBuilder;
 
-namespace CreateReport
+namespace FeinstaubGurke.PdfReport
 {
-    public class PdfHelper : IDisposable
+    public class PdfProcessor : IDisposable
     {
         private readonly PdfDocumentBuilder _pdfDocumentBuilder;
         private readonly AddedFont _defaultFont;
         private readonly AddedFont _headlineFont;
 
-        public PdfHelper()
+        public PdfProcessor(string fontPath)
         {
             this._pdfDocumentBuilder = new PdfDocumentBuilder
             {
@@ -23,8 +23,8 @@ namespace CreateReport
                 }
             };
 
-            this._defaultFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes("Fonts/Roboto-Regular.ttf"));
-            this._headlineFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes("Fonts/Roboto-Bold.ttf"));
+            this._defaultFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes(Path.Combine(fontPath, "Roboto-Regular.ttf")));
+            this._headlineFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes(Path.Combine(fontPath, "Roboto-Bold.ttf")));
         }
 
         public void Dispose()
@@ -32,7 +32,7 @@ namespace CreateReport
             this._pdfDocumentBuilder?.Dispose();
         }
 
-        public void CreateReport(DeviceInfo[] deviceInfos)
+        public byte[] CreateReport(DeviceInfo[] deviceInfos)
         {
             #region Cover page
 
@@ -49,6 +49,11 @@ namespace CreateReport
             for (var i = 0; i < deviceInfos.Length; i++)
             {
                 var deviceInfo = deviceInfos[i];
+
+                if (deviceInfo.Data.Count == 0)
+                {
+                    continue;
+                }
 
                 var page = this._pdfDocumentBuilder.AddPage(PageSize.A4, false);
                 var pageTop = new PdfPoint(0, page.PageSize.Top);
@@ -118,8 +123,7 @@ namespace CreateReport
                 this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 300, page.PageSize.Top - 50));
             }
 
-            var fileBytes = this._pdfDocumentBuilder.Build();
-            File.WriteAllBytes("Feinstaub-Report.pdf", fileBytes);
+            return this._pdfDocumentBuilder.Build();
         }
 
         private void DrawHourGraphic(

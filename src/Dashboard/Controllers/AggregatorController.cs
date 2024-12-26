@@ -129,7 +129,7 @@ namespace Dashboard.Controllers
 
             using var memoryStream = new MemoryStream();
             await JsonSerializer.SerializeAsync(memoryStream, sensorDayData);
-            var test = JsonSerializer.Serialize(sensorDayData);
+            //var test = JsonSerializer.Serialize(sensorDayData);
 
             var key = $"{sensor.DeviceId}-{date:yyyy-MM-dd}.json";
             await this._objectStorageService.UploadFileAsync(key, memoryStream);
