@@ -80,7 +80,7 @@ namespace Dashboard.Controllers
             }
 
             using var processor = new PdfProcessor(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/pdf"));
-            var fileData = processor.CreateReport(items.ToArray());
+            var fileData = processor.CreateReport([.. items]);
 
             return File(fileData, "application/pdf", "report.pdf");
         }
