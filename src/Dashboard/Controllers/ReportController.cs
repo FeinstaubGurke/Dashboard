@@ -30,26 +30,27 @@ namespace Dashboard.Controllers
         [Route("")]
         public async Task<ActionResult<byte[]>> CreateReportAsync()
         {
-            var sensors = this._sensorService.GetSensors();
+            var sensors = this._sensorService.GetSensors().Take(1);
 
             var startDate = DateTime.Today.AddDays(-1);
+            var reportDays = 14;
 
             var items = new List<DeviceInfo>();
 
             foreach (var sensor in sensors)
             {
-                var sensorRecords = new List<SensorRecord>();
+                var dailySensorRecords = new Dictionary<DateOnly, SensorRecord[]>();
 
-                for (var i = 0; i < 14; i++)
+                for (var i = 0; i < reportDays; i++)
                 {
-                    var processingDate = startDate.AddDays(-i);
+                    var processingDate = DateOnly.FromDateTime(startDate.AddDays(-i));
 
                     try
                     {
                         var dayJsonData = await this._objectStorageService.GetFileAsync($"{sensor.DeviceId}-{processingDate:yyyy-MM-dd}.json");
                         var sensorDayData = JsonSerializer.Deserialize<SensorDayData>(dayJsonData);
 
-                        sensorRecords.AddRange(sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
+                        var sensorRecords = sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
                         {
                             Timestamp = o.Timestamp,
                             PM1 = o.PM1,
@@ -58,7 +59,9 @@ namespace Dashboard.Controllers
                             PM10 = o.PM10,
                             Humidity = o.Humidity,
                             Temperature = o.Temperature
-                        }).ToArray());
+                        }).ToArray();
+
+                        dailySensorRecords.Add(processingDate, sensorRecords);
                     }
                     catch (Exception exception)
                     {
@@ -73,9 +76,7 @@ namespace Dashboard.Controllers
                     Name = sensor.Name,
                     City = sensor.City,
                     District = sensor.District,
-                    Data = sensorRecords,
-                    HourlyPM2_5StatisticData = [.. DataHelper.CreateStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
-                    HourGroupPM2_5StatisticData = [.. DataHelper.CreateHourGroupStatistic(sensorRecords, sensorRecord => sensorRecord.PM2_5)],
+                    DailySensorRecords = dailySensorRecords
                 });
             }
 

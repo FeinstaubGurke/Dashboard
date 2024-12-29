@@ -6,8 +6,7 @@
         public string? Name { get; set; }
         public string? City { get; set; }
         public string? District { get; set; }
-        public List<SensorRecord> Data { get; set; }
-        public HourlyStatisticData[] HourlyPM2_5StatisticData { get; set; }
-        public DayStatisticData[] HourGroupPM2_5StatisticData { get; set; }
+
+        public Dictionary<DateOnly, SensorRecord[]> DailySensorRecords { get; set; }
     }
 }

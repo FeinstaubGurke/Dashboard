@@ -32,10 +32,12 @@ namespace Dashboard.Controllers
 
         [HttpGet]
         [Route("")]
-        public async Task<ActionResult<Sensor[]>> AggregateDataAsync()
+        public async Task<ActionResult> AggregateDataAsync()
         {
             var sensors = this._sensorService.GetSensors();
             var startDate = DateTime.Today.AddDays(-1);
+
+            var processCount = 0;
 
             foreach (var sensor in sensors)
             {
@@ -49,11 +51,17 @@ namespace Dashboard.Controllers
                         continue;
                     }
 
+                    processCount++;
                     this._logger.LogInformation($"{nameof(AggregateDataAsync)} - {sensor.DeviceId} {processDate}");
                 }
             }
 
-            return StatusCode(StatusCodes.Status200OK, sensors);
+            if (processCount > 0)
+            {
+                return StatusCode(StatusCodes.Status204NoContent, new { ProcessCount = processCount });
+            }
+
+            return StatusCode(StatusCodes.Status204NoContent);
         }
 
         private async Task<bool> AggregateDateAsync(Sensor sensor, DateOnly date)
@@ -129,7 +137,6 @@ namespace Dashboard.Controllers
 
             using var memoryStream = new MemoryStream();
             await JsonSerializer.SerializeAsync(memoryStream, sensorDayData);
-            //var test = JsonSerializer.Serialize(sensorDayData);
 
             var key = $"{sensor.DeviceId}-{date:yyyy-MM-dd}.json";
             await this._objectStorageService.UploadFileAsync(key, memoryStream);
@@ -142,7 +149,6 @@ namespace Dashboard.Controllers
         private async Task<UplinkMessageWebhook?> GetUplinkMessageWebhookAsync(string key)
         {
             var fileData = await this._objectStorageService.GetFileAsync(key);
-            //this._logger.LogInformation($"{nameof(GetUplinkMessageWebhookAsync)} - Get data {key} {fileData.Length}");
 
             return JsonSerializer.Deserialize<UplinkMessageWebhook>(fileData, this._jsonSerializerOptions);
         }

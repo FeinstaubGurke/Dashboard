@@ -27,7 +27,14 @@ namespace FeinstaubGurke.PdfReport
             this._headlineFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes(Path.Combine(fontPath, "Roboto-Bold.ttf")));
         }
 
+        /// </<inheritdoc/>
         public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
         {
             this._pdfDocumentBuilder?.Dispose();
         }
@@ -50,7 +57,7 @@ namespace FeinstaubGurke.PdfReport
             {
                 var deviceInfo = deviceInfos[i];
 
-                if (deviceInfo.Data.Count == 0)
+                if (deviceInfo.DailySensorRecords.Count == 0)
                 {
                     continue;
                 }
@@ -74,18 +81,19 @@ namespace FeinstaubGurke.PdfReport
 
                 page.AddText("Tagesmittelwert", 12, pageTop.Translate(pagePadding, -120), this._headlineFont);
 
-                var dailyValues = deviceInfo.Data.GroupBy(o => o.Timestamp.Date).Select(o => new
-                {
-                    Date = o.Key,
-                    AveragePm2_5 = o.Average(o => o.PM2_5),
-                    MinimumPm2_5 = o.Min(o => o.PM2_5),
-                    MaximumPm2_5 = o.Max(o => o.PM2_5)
+                var dailyValues = deviceInfo.DailySensorRecords.Select(kvp => new {
+                    Date = kvp.Key,
+                    AveragePm2_5 = kvp.Value.Average(o => o.PM2_5),
+                    MinimumPm2_5 = kvp.Value.Min(o => o.PM2_5),
+                    MaximumPm2_5 = kvp.Value.Max(o => o.PM2_5)
                 }).OrderBy(o => o.Date).ToArray();
 
                 var position1 = pageTop.Translate(pagePadding, -180);
 
                 var pageWidth = page.PageSize.Width - (pagePadding * 2);
                 var boxWidth = pageWidth / dailyValues.Length;
+
+                var placeholderPoint = new PdfPoint();
 
                 var boxHeight = 50;
                 var boxPadding = 10;
@@ -97,8 +105,8 @@ namespace FeinstaubGurke.PdfReport
                 var dailyMinimum = "Min";
                 var dailyMaximum = "Max";
 
-                var textWidthMinimum = this.GetTextWidth(page.MeasureText(dailyMinimum, fontSizeLabel, new PdfPoint(), this._headlineFont));
-                var textWidthMaximum = this.GetTextWidth(page.MeasureText(dailyMaximum, fontSizeLabel, new PdfPoint(), this._headlineFont));
+                var textWidthMinimum = this.GetTextWidth(page.MeasureText(dailyMinimum, fontSizeLabel, placeholderPoint, this._headlineFont));
+                var textWidthMaximum = this.GetTextWidth(page.MeasureText(dailyMaximum, fontSizeLabel, placeholderPoint, this._headlineFont));
 
                 foreach (var dailyValue in dailyValues)
                 {
@@ -117,12 +125,12 @@ namespace FeinstaubGurke.PdfReport
                     page.DrawRectangle(position1, boxWidth, boxHeight, lineWidth: 0.1, fill: true);
                     this.SetColor(page, DrawColor.Black);
 
-                    var textWidth = this.GetTextWidth(page.MeasureText(dailyAverage, fontSizeAverage, new PdfPoint(), this._headlineFont));
+                    var textWidth = this.GetTextWidth(page.MeasureText(dailyAverage, fontSizeAverage, placeholderPoint, this._headlineFont));
                     var paddingLeft = (boxWidth - textWidth) / 2.0;
                     page.AddText(dailyAverage, fontSizeAverage, position1.Translate(paddingLeft, 25), this._headlineFont);
 
-                    var textWidthMinimumValue = this.GetTextWidth(page.MeasureText(dailyMinimumValue, fontSizeMaxMin, new PdfPoint(), this._headlineFont));
-                    var textWidthMaximumValue = this.GetTextWidth(page.MeasureText(dailyMaximumValue, fontSizeMaxMin, new PdfPoint(), this._headlineFont));
+                    var textWidthMinimumValue = this.GetTextWidth(page.MeasureText(dailyMinimumValue, fontSizeMaxMin, placeholderPoint, this._headlineFont));
+                    var textWidthMaximumValue = this.GetTextWidth(page.MeasureText(dailyMaximumValue, fontSizeMaxMin, placeholderPoint, this._headlineFont));
 
                     var paddingLeft2 = boxWidth - textWidthMaximum - boxPadding;
                     var paddingLeft3 = boxWidth - textWidthMaximumValue - boxPadding;
@@ -143,11 +151,7 @@ namespace FeinstaubGurke.PdfReport
                     position1 = position1.MoveX(boxWidth);
                 }
 
-                var dataPoints = deviceInfo.HourlyPM2_5StatisticData.OrderBy(o => o.Date).ThenBy(o => o.Hour).ToArray();
-                var dataPoints2 = deviceInfo.HourGroupPM2_5StatisticData.OrderBy(o => o.Date).ToArray();
-
-                this.DrawDayGraphic(page, 240, dataPoints2, 80, pagePadding);
-                this.DrawHourGraphic(page, 400, dataPoints, 170, pagePadding);
+                this.DrawDayGraphic(page, 240, deviceInfo.DailySensorRecords, 200, pagePadding);
 
                 this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 300, page.PageSize.Top - 50));
             }
@@ -155,139 +159,59 @@ namespace FeinstaubGurke.PdfReport
             return this._pdfDocumentBuilder.Build();
         }
 
-        private void DrawHourGraphic(
-            PdfPageBuilder page,
-            int positionShiftY,
-            HourlyStatisticData[] dataPoints,
-            int chartElementHeight = 200,
-            double pagePadding = 10)
-        {
-            var font = this._defaultFont;
-            var dayInfoPositionShiftY = 0;
-
-            var pageWidth = page.PageSize.Width - (pagePadding * 2);
-            var chartElementWidth = pageWidth / dataPoints.Length;
-
-            var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
-            this.SetColor(page, DrawColor.Black);
-            page.AddText("Tagesverlauf", 12, drawInitPosition.MoveY(10), this._headlineFont);
-            var lastDayPositionX = 0.0;
-
-            for (var i = 0; i < dataPoints.Length; i++)
-            {
-                var dataPoint = dataPoints[i];
-                var nextDay = false;
-
-                if (i > 0 && dataPoint.Date.DayOfWeek != dataPoints[i - 1].Date.DayOfWeek)
-                {
-                    nextDay = true;
-                }
-
-                double positionX = i * chartElementWidth;
-                var position = drawInitPosition.Translate(positionX, -chartElementHeight);
-
-                var chartElementVeryGoodHeight = chartElementHeight * dataPoint.VeryGood;
-                var chartElementVeryGoodPositionY = 0;
-                var chartElementGoodHeight = chartElementHeight * dataPoint.Good;
-                var chartElementGoodPositionY = chartElementVeryGoodHeight;
-                var chartElementSatisfactoryHeight = chartElementHeight * dataPoint.Satisfactory;
-                var chartElementSatisfactoryPositionY = chartElementVeryGoodHeight + chartElementGoodHeight;
-                var chartElementPoorHeight = chartElementHeight * dataPoint.Poor;
-                var chartElementPoorPositionY = chartElementVeryGoodHeight + chartElementGoodHeight + chartElementSatisfactoryHeight;
-                var chartElementVeryPoorHeight = chartElementHeight * dataPoint.VeryPoor;
-                var chartElementVeryPoorPositionY = chartElementVeryGoodHeight + chartElementGoodHeight + chartElementSatisfactoryHeight + chartElementPoorHeight;
-
-                this.SetColor(page, DrawColor.Green);
-                page.DrawRectangle(position.MoveY(chartElementVeryGoodPositionY), chartElementWidth, chartElementVeryGoodHeight, 0.1, fill: true);
-
-                this.SetColor(page, DrawColor.DarkGreen);
-                page.DrawRectangle(position.MoveY(chartElementGoodPositionY), chartElementWidth, chartElementGoodHeight, 0.1, fill: true);
-
-                this.SetColor(page, DrawColor.Yellow);
-                page.DrawRectangle(position.MoveY(chartElementSatisfactoryPositionY), chartElementWidth, chartElementSatisfactoryHeight, 0.1, fill: true);
-
-                this.SetColor(page, DrawColor.Red);
-                page.DrawRectangle(position.MoveY(chartElementPoorPositionY), chartElementWidth, chartElementPoorHeight, 0.1, fill: true);
-
-                this.SetColor(page, DrawColor.DarkRed);
-                page.DrawRectangle(position.MoveY(chartElementVeryPoorPositionY), chartElementWidth, chartElementVeryPoorHeight, 0.1, fill: true);
-
-                #region Draw Day Info
-
-                if (nextDay)
-                {
-                    var dayWidth = positionX - lastDayPositionX;
-                    this.DrawDayBox(page, dataPoints[i - 1].Date, position.Translate(-dayWidth, -dayInfoPositionShiftY), dayWidth);
-
-                    lastDayPositionX = positionX;
-                }
-
-                #endregion
-
-                #region Draw Hour
-
-                if (dataPoint.Hour % 2 == 0)
-                {
-                    page.SetTextAndFillColor(100, 100, 100);
-                    page.AddText($"{dataPoint.Hour}", 3, position.MoveY(chartElementHeight + 2), font);
-                }
-
-                #endregion
-            }
-
-            #region Draw LastDay Info
-
-            var dayWidth1 = pageWidth - lastDayPositionX;
-            this.DrawDayBox(page, dataPoints.Last().Date, drawInitPosition.Translate(lastDayPositionX, -(chartElementHeight + dayInfoPositionShiftY)), dayWidth1);
-
-            #endregion
-
-            this.SetColor(page, DrawColor.Black);
-        }
-
         private void DrawDayGraphic(
             PdfPageBuilder page,
             int positionShiftY,
-            DayStatisticData[] dataPoints,
+            Dictionary<DateOnly, SensorRecord[]> dailySensorRecords,
             int chartElementHeight = 200,
             double pagePadding = 10)
         {
             var font = this._defaultFont;
             var pageWidth = page.PageSize.Width - (pagePadding * 2);
 
-            var items = dataPoints.GroupBy(o => o.Date).Select(o => new
-            {
-                Date = o.Key,
-                Data = o.ToList()
-            }).ToArray();
-
-            var chartElementWidth = pageWidth / items.Length;
+            var chartElementWidth = pageWidth / dailySensorRecords.Count;
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
-            page.AddText("Tagesverlauf (2 Stunden pro Block)", 12, drawInitPosition.MoveY(10), this._headlineFont);
+            page.AddText("Tagesverlauf (24h)", 12, drawInitPosition.MoveY(10), this._headlineFont);
 
-            var blockHeight = chartElementHeight / 12;
+            var hourCount = 24;
+            var blockHeight = chartElementHeight / (double)hourCount;
 
-            for (var i = 0; i < items.Length; i++)
+            for (var i = 0; i < dailySensorRecords.Count; i++)
             {
-                var dataPoint = items[i];
+                var keyValuePair = dailySensorRecords.ElementAt(i);
+                var sensorRecords = keyValuePair.Value;
+
+                var dataGroupedByHour = sensorRecords
+                    .GroupBy(o => o.Timestamp.Hour)
+                    .Select(o => new
+                    {
+                        Key = o.Key,
+                        Average = o.Average(x => x.PM2_5)
+                    }).ToList();
 
                 double positionX = i * chartElementWidth;
                 var position = drawInitPosition.Translate(positionX, 0);
+                var moveY = 0;
 
-                for (var j = 0; j < dataPoint.Data.Count; j++)
+                for (var hour = 0; hour < hourCount; hour++)
                 {
-                    var hourGroup = dataPoint.Data[j].HourGroup;
-                    var average = dataPoint.Data[j].Average;
+                    // Split hours into 4 blocks
+                    moveY = (hour / 6) * 1;
 
-                    this.SetColor(page, this.GetColorFromMeasurement(average ?? 0));
-                    page.DrawRectangle(position.MoveY(-(hourGroup * blockHeight)), chartElementWidth, blockHeight, 0.1, fill: true);
+                    var average = dataGroupedByHour.Where(o => o.Key == hour).SingleOrDefault()?.Average ?? 0;
+                    var blockPosition = position.MoveY(-((hour + 1) * blockHeight) - moveY);
+
+                    this.SetColor(page, this.GetColorFromMeasurement(average));
+                    page.DrawRectangle(blockPosition, chartElementWidth, blockHeight, 0.1, fill: true);
+                    this.SetColor(page, DrawColor.LightGray);
+                    page.AddText(average.ToString("0.00"), 5, blockPosition.MoveY(2), this._defaultFont);
                 }
 
                 #region Draw Day Info
 
-                this.DrawDayBox(page, dataPoint.Date, position.Translate(0, -(chartElementHeight - 14)), chartElementWidth);
+                this.DrawDayBox(page, keyValuePair.Key, position.Translate(0, -chartElementHeight - 3), chartElementWidth);
 
                 #endregion
             }
