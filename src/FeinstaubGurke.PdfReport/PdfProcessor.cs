@@ -86,7 +86,7 @@ namespace FeinstaubGurke.PdfReport
                     AveragePm2_5 = kvp.Value.Average(o => o.PM2_5),
                     MinimumPm2_5 = kvp.Value.Min(o => o.PM2_5),
                     MaximumPm2_5 = kvp.Value.Max(o => o.PM2_5)
-                }).OrderBy(o => o.Date).ToArray();
+                }).ToArray();
 
                 var position1 = pageTop.Translate(pagePadding, -180);
 
@@ -173,7 +173,7 @@ namespace FeinstaubGurke.PdfReport
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
-            page.AddText("Tagesverlauf (24h)", 12, drawInitPosition.MoveY(10), this._headlineFont);
+            page.AddText("Tagesverlauf (24h) 00:00 -> 23:59", 12, drawInitPosition.MoveY(10), this._headlineFont);
 
             var hourCount = 24;
             var blockHeight = chartElementHeight / (double)hourCount;

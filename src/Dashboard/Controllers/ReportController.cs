@@ -30,7 +30,7 @@ namespace Dashboard.Controllers
         [Route("")]
         public async Task<ActionResult<byte[]>> CreateReportAsync()
         {
-            var sensors = this._sensorService.GetSensors().Take(1);
+            var sensors = this._sensorService.GetSensors();
 
             var startDate = DateTime.Today.AddDays(-1);
             var reportDays = 14;
@@ -49,6 +49,11 @@ namespace Dashboard.Controllers
                     {
                         var dayJsonData = await this._objectStorageService.GetFileAsync($"{sensor.DeviceId}-{processingDate:yyyy-MM-dd}.json");
                         var sensorDayData = JsonSerializer.Deserialize<SensorDayData>(dayJsonData);
+
+                        if (sensorDayData == null)
+                        {
+                            continue;
+                        }
 
                         var sensorRecords = sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
                         {
@@ -76,7 +81,7 @@ namespace Dashboard.Controllers
                     Name = sensor.Name,
                     City = sensor.City,
                     District = sensor.District,
-                    DailySensorRecords = dailySensorRecords
+                    DailySensorRecords = dailySensorRecords.OrderBy(o => o.Key).ToDictionary()
                 });
             }
 
