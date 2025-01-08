@@ -27,10 +27,6 @@ namespace FeinstaubGurke.PdfReport
 
             this._defaultFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes(Path.Combine(fontPath, "Roboto-Regular.ttf")));
             this._headlineFont = this._pdfDocumentBuilder.AddTrueTypeFont(File.ReadAllBytes(Path.Combine(fontPath, "Roboto-Bold.ttf")));
-
-            var cultureInfo = new CultureInfo("de-DE");
-            Thread.CurrentThread.CurrentCulture = cultureInfo;
-            Thread.CurrentThread.CurrentUICulture = cultureInfo;
         }
 
         /// </<inheritdoc/>
