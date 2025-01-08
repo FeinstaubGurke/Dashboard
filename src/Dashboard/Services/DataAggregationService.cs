@@ -1,22 +1,18 @@
 ﻿using Dashboard.Models;
 using Dashboard.Models.Webhooks;
-using Dashboard.Services;
-using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
-namespace Dashboard.Controllers
+namespace Dashboard.Services
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AggregatorController : ControllerBase
+    public class DataAggregationService : IDataAggregationService
     {
-        private readonly ILogger<AggregatorController> _logger;
+        private readonly ILogger<DataAggregationService> _logger;
         private readonly SensorService _sensorService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly JsonSerializerOptions _jsonSerializerOptions;
 
-        public AggregatorController(
-            ILogger<AggregatorController> logger,
+        public DataAggregationService(
+            ILogger<DataAggregationService> logger,
             SensorService sensorService,
             IObjectStorageService objectStorageService)
         {
@@ -30,38 +26,45 @@ namespace Dashboard.Controllers
             };
         }
 
-        [HttpGet]
-        [Route("")]
-        public async Task<ActionResult> AggregateDataAsync()
+        public async Task<bool> AggregateAsync(CancellationToken cancellationToken = default)
         {
             var sensors = this._sensorService.GetSensors();
+            if (sensors.Length == 0)
+            {
+                return false;
+            }
+
+            // Set the start date to the previous day, as today's data should not be processed yet (it's incomplete).
             var startDate = DateTime.Today.AddDays(-1);
 
             var processCount = 0;
 
             foreach (var sensor in sensors)
             {
+                var failureCount = 0;
+
                 for (int i = 0; i < 90; i++)
                 {
                     var processDate = DateOnly.FromDateTime(startDate.AddDays(-i));
                     var succesful = await this.AggregateDateAsync(sensor, processDate);
                     if (!succesful)
                     {
-                        this._logger.LogError($"{nameof(AggregateDataAsync)} - {sensor.DeviceId} {processDate}");
+                        this._logger.LogError($"{nameof(AggregateAsync)} - {sensor.DeviceId} {processDate}");
+                        failureCount++;
                         continue;
                     }
 
                     processCount++;
-                    this._logger.LogInformation($"{nameof(AggregateDataAsync)} - {sensor.DeviceId} {processDate}");
+                    this._logger.LogInformation($"{nameof(AggregateAsync)} - {sensor.DeviceId} {processDate}");
                 }
             }
 
             if (processCount > 0)
             {
-                return StatusCode(StatusCodes.Status204NoContent, new { ProcessCount = processCount });
+                return true;
             }
 
-            return StatusCode(StatusCodes.Status204NoContent);
+            return false;
         }
 
         private async Task<bool> AggregateDateAsync(Sensor sensor, DateOnly date)
@@ -139,9 +142,10 @@ namespace Dashboard.Controllers
             await JsonSerializer.SerializeAsync(memoryStream, sensorDayData);
 
             var key = $"{sensor.DeviceId}-{date:yyyy-MM-dd}.json";
-            await this._objectStorageService.UploadFileAsync(key, memoryStream);
-
-            await this._objectStorageService.DeleteFilesAsync([.. sensorDataKeys]);
+            if (await this._objectStorageService.UploadFileAsync(key, memoryStream))
+            {
+                await this._objectStorageService.DeleteFilesAsync([.. sensorDataKeys]);
+            }
 
             return true;
         }

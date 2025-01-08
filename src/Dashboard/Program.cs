@@ -16,12 +16,20 @@ builder.Services.AddQuartz(q => {
     q.InterruptJobsOnShutdownWithWait = true;
 
     q.AddJob<SensorInactivityCheckJob>(opts => opts.WithIdentity(JobKeys.SensorInactivityCheck));
+    q.AddJob<AggregateSensorDataJob>(opts => opts.WithIdentity(JobKeys.AggregateSensorData));
 
     q.AddTrigger(opts => opts
         .ForJob(JobKeys.SensorInactivityCheck)
         .WithIdentity($"{nameof(SensorInactivityCheckJob)}-trigger")
         .StartAt(new DateTimeOffset(DateTime.UtcNow.AddSeconds(30)))
         .WithSimpleSchedule(o => o.WithIntervalInMinutes(30).RepeatForever())
+    );
+
+    q.AddTrigger(opts => opts
+        .ForJob(JobKeys.AggregateSensorData)
+        .WithIdentity($"{nameof(AggregateSensorDataJob)}-trigger")
+        .StartAt(DateBuilder.TodayAt(0, 10, 0))
+        .WithSimpleSchedule(o => o.WithIntervalInHours(24).RepeatForever())
     );
 });
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);

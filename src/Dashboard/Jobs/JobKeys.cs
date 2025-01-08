@@ -11,5 +11,10 @@ namespace Dashboard.Jobs
         /// Sensor Inactivity Check
         /// </summary>
         public static JobKey SensorInactivityCheck = new JobKey(nameof(SensorInactivityCheck));
+
+        /// <summary>
+        /// Aggregate Sensor Data
+        /// </summary>
+        public static JobKey AggregateSensorData = new JobKey(nameof(AggregateSensorData));
     }
 }

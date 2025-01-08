@@ -7,8 +7,8 @@ using System.Text.Json;
 
 namespace Dashboard.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class ReportController : ControllerBase
     {
         private readonly ILogger<ReportController> _logger;

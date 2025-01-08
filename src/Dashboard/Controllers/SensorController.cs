@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Dashboard.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class SensorController : ControllerBase
     {
         private readonly ILogger<SensorController> _logger;
