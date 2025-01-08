@@ -11,7 +11,7 @@ RUN dotnet publish "Dashboard/Dashboard.csproj" --os linux --configuration Relea
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 
-RUN apk add --no-cache icu-data-full
+RUN apk add --no-cache icu-libs
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV LANG de_DE.UTF-8
 ENV LC_ALL de_DE.UTF-8
