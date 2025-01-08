@@ -37,6 +37,7 @@ namespace Dashboard.Services
             // Set the start date to the previous day, as today's data should not be processed yet (it's incomplete).
             var startDate = DateTime.Today.AddDays(-1);
 
+            var maxFailureCount = 7;
             var processCount = 0;
 
             foreach (var sensor in sensors)
@@ -52,6 +53,11 @@ namespace Dashboard.Services
                         this._logger.LogError($"{nameof(AggregateAsync)} - {sensor.DeviceId} {processDate}");
                         failureCount++;
                         continue;
+                    }
+
+                    if (failureCount > maxFailureCount)
+                    {
+                        break;
                     }
 
                     processCount++;
