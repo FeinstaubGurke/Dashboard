@@ -100,16 +100,24 @@ namespace Dashboard.Services
 
             do
             {
-                response = await client.ListObjectsV2Async(request, cancellationToken);
-
-                fileInfos.AddRange(response.S3Objects.Select(o => new FileInfoDto
+                try
                 {
-                    Key = o.Key,
-                    LastModified = o.LastModified
-                }));
+                    response = await client.ListObjectsV2Async(request, cancellationToken);
 
-                // Update the continuation token to get the next set of results
-                request.ContinuationToken = response.NextContinuationToken;
+                    fileInfos.AddRange(response.S3Objects.Select(o => new FileInfoDto
+                    {
+                        Key = o.Key,
+                        LastModified = o.LastModified
+                    }));
+
+                    // Update the continuation token to get the next set of results
+                    request.ContinuationToken = response.NextContinuationToken;
+                }
+                catch (Exception exception)
+                {
+                    this._logger.LogError(exception, $"{nameof(GetFileInfosAsync)}");
+                    break;
+                }
             } while (response.IsTruncated);
 
             return fileInfos.ToArray();

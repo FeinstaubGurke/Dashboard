@@ -46,6 +46,11 @@ namespace Dashboard.Services
 
                 for (int i = 0; i < 90; i++)
                 {
+                    if (failureCount > maxFailureCount)
+                    {
+                        break;
+                    }
+
                     var processDate = DateOnly.FromDateTime(startDate.AddDays(-i));
                     var succesful = await this.AggregateDateAsync(sensor, processDate);
                     if (!succesful)
@@ -53,11 +58,6 @@ namespace Dashboard.Services
                         this._logger.LogError($"{nameof(AggregateAsync)} - {sensor.DeviceId} {processDate}");
                         failureCount++;
                         continue;
-                    }
-
-                    if (failureCount > maxFailureCount)
-                    {
-                        break;
                     }
 
                     processCount++;
@@ -81,6 +81,8 @@ namespace Dashboard.Services
 
             foreach (var fileInfo in fileInfos.OrderBy(o => o.Key))
             {
+                // Check the object storage key has the right format
+                // eui-XXXXXXXXXXXXXXXX-2025-01-02_00_11.json
                 if (fileInfo.Key.Length < 42)
                 {
                     continue;

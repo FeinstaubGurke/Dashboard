@@ -9,13 +9,17 @@ namespace Dashboard.Jobs
     [DisallowConcurrentExecution]
     public class AggregateSensorDataJob : IJob
     {
+        private readonly ILogger<AggregateSensorDataJob> _logger;
         private readonly IDataAggregationService _dataAggregationService;
 
         /// <summary>
         /// Aggregate Sensor Data Job
         /// </summary>
-        public AggregateSensorDataJob(IDataAggregationService dataAggregationService)
+        public AggregateSensorDataJob(
+            ILogger<AggregateSensorDataJob> logger,
+            IDataAggregationService dataAggregationService)
         {
+            this._logger = logger;
             this._dataAggregationService = dataAggregationService;
         }
 
@@ -23,6 +27,7 @@ namespace Dashboard.Jobs
         public async Task Execute(IJobExecutionContext context)
         {
             await this._dataAggregationService.AggregateAsync(context.CancellationToken);
+            this._logger.LogInformation($"{nameof(Execute)} - Job done");
         }
     }
 }
