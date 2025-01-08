@@ -70,8 +70,8 @@ namespace Dashboard.Controllers
                     }
                     catch (Exception exception)
                     {
-                        this._logger.LogInformation($"{nameof(CreateReportAsync)} - Cannot get sensor data for {sensor.DeviceId}");
-                        break;
+                        this._logger.LogInformation($"{nameof(CreateReportAsync)} - Cannot get sensor data for {sensor.DeviceId} {processingDate}");
+                        continue;
                     }
                 }
 
