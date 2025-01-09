@@ -10,6 +10,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SensorService>();
 builder.Services.AddSingleton<TheThingsStackClient>();
 builder.Services.AddScoped<IObjectStorageService, S3ObjectStorageService>();
+builder.Services.AddScoped<IDataAggregationService, DataAggregationService>();
 
 builder.Services.AddQuartz(q => {
     q.InterruptJobsOnShutdown = true;
