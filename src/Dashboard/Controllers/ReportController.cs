@@ -3,6 +3,7 @@ using Dashboard.Services;
 using FeinstaubGurke.PdfReport;
 using FeinstaubGurke.PdfReport.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using System.Text.Json;
 
 namespace Dashboard.Controllers
@@ -14,7 +15,6 @@ namespace Dashboard.Controllers
         private readonly ILogger<ReportController> _logger;
         private readonly SensorService _sensorService;
         private readonly IObjectStorageService _objectStorageService;
-        private readonly JsonSerializerOptions _jsonSerializerOptions;
 
         public ReportController(
             ILogger<ReportController> logger,
@@ -27,7 +27,7 @@ namespace Dashboard.Controllers
         }
 
         [HttpGet]
-        [Route("")]
+        [OutputCache(Duration = 30_000)] //6 hours
         public async Task<ActionResult<byte[]>> CreateReportAsync()
         {
             var sensors = this._sensorService.GetSensors();

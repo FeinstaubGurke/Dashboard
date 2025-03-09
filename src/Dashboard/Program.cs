@@ -5,6 +5,8 @@ using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddOutputCache();
+
 // Add services to the container.
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<SensorService>();
@@ -42,6 +44,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseOutputCache();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
