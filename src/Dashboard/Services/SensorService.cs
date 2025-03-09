@@ -109,7 +109,7 @@ namespace Dashboard.Services
 
         public Sensor[] GetSensors()
         {
-            return [.. this._sensors.Values.OrderBy(sensor => sensor.City).ThenBy(sensor => sensor.Description)];
+            return [.. this._sensors.Values.OrderBy(sensor => sensor.City).ThenBy(sensor => sensor.District)];
         }
     }
 }
