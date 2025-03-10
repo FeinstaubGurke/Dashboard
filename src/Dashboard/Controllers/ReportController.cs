@@ -28,17 +28,20 @@ namespace Dashboard.Controllers
         }
 
         [HttpGet]
-        [OutputCache(Duration = 30_000)] //6 hours
-        public async Task<ActionResult<byte[]>> CreateReportAsync()
+        [OutputCache(Duration = 30_000, VaryByQueryKeys = ["filter"])] //6 hours
+        public async Task<ActionResult<byte[]>> CreateReportAsync(
+            [FromQuery] string filter,
+            CancellationToken cancellationToken)
         {
             var sensors = this._sensorService.GetSensors();
+            var filteredSensors = sensors.Where(o => o.City.Equals(filter, StringComparison.OrdinalIgnoreCase));
 
             var startDate = DateTime.Today.AddDays(-1);
             var reportDays = 14;
 
             var items = new List<DeviceInfo>();
 
-            foreach (var sensor in sensors)
+            foreach (var sensor in filteredSensors)
             {
                 var dailySensorRecords = new ConcurrentDictionary<DateOnly, SensorRecord[]>();
 
@@ -47,7 +50,7 @@ namespace Dashboard.Controllers
                 for (var i = 0; i < reportDays; i++)
                 {
                     var processingDate = DateOnly.FromDateTime(startDate.AddDays(-i));
-                    var getReportTask = this.GetDayReportAsync(sensor, processingDate)
+                    var getReportTask = this.GetDayReportAsync(sensor, processingDate, cancellationToken)
                         .ContinueWith(task =>
                         {
                             if (!task.IsCompletedSuccessfully)
@@ -86,12 +89,13 @@ namespace Dashboard.Controllers
 
         private async Task<SensorRecord[]?> GetDayReportAsync(
             Sensor sensor,
-            DateOnly reportDate)
+            DateOnly reportDate,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var objectKey = $"{sensor.DeviceId}-{reportDate:yyyy-MM-dd}.json";
-                var dayJsonData = await this._objectStorageService.GetFileAsync(objectKey);
+                var dayJsonData = await this._objectStorageService.GetFileAsync(objectKey, cancellationToken);
                 var sensorDayData = JsonSerializer.Deserialize<SensorDayData>(dayJsonData);
 
                 if (sensorDayData == null)
