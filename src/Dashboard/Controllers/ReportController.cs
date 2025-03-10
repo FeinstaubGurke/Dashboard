@@ -4,6 +4,7 @@ using FeinstaubGurke.PdfReport;
 using FeinstaubGurke.PdfReport.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace Dashboard.Controllers
@@ -39,41 +40,33 @@ namespace Dashboard.Controllers
 
             foreach (var sensor in sensors)
             {
-                var dailySensorRecords = new Dictionary<DateOnly, SensorRecord[]>();
+                var dailySensorRecords = new ConcurrentDictionary<DateOnly, SensorRecord[]>();
+
+                var reportTasks = new List<Task>();
 
                 for (var i = 0; i < reportDays; i++)
                 {
                     var processingDate = DateOnly.FromDateTime(startDate.AddDays(-i));
-
-                    try
-                    {
-                        var dayJsonData = await this._objectStorageService.GetFileAsync($"{sensor.DeviceId}-{processingDate:yyyy-MM-dd}.json");
-                        var sensorDayData = JsonSerializer.Deserialize<SensorDayData>(dayJsonData);
-
-                        if (sensorDayData == null)
+                    var getReportTask = this.GetDayReportAsync(sensor, processingDate)
+                        .ContinueWith(task =>
                         {
-                            continue;
-                        }
+                            if (!task.IsCompletedSuccessfully)
+                            {
+                                return;
+                            }
 
-                        var sensorRecords = sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
-                        {
-                            Timestamp = o.Timestamp,
-                            PM1 = o.PM1,
-                            PM2_5 = o.PM2_5,
-                            PM4 = o.PM4,
-                            PM10 = o.PM10,
-                            Humidity = o.Humidity,
-                            Temperature = o.Temperature
-                        }).ToArray();
+                            if (task.Result == null)
+                            {
+                                return;
+                            }
 
-                        dailySensorRecords.Add(processingDate, sensorRecords);
-                    }
-                    catch (Exception exception)
-                    {
-                        this._logger.LogInformation($"{nameof(CreateReportAsync)} - Cannot get sensor data for {sensor.DeviceId} {processingDate}");
-                        continue;
-                    }
+                            dailySensorRecords.TryAdd(processingDate, task.Result);
+                        });
+
+                    reportTasks.Add(getReportTask);
                 }
+
+                await Task.WhenAll(reportTasks);
 
                 items.Add(new DeviceInfo
                 {
@@ -89,6 +82,39 @@ namespace Dashboard.Controllers
             var fileData = processor.CreateReport([.. items]);
 
             return File(fileData, "application/pdf", "report.pdf");
+        }
+
+        private async Task<SensorRecord[]?> GetDayReportAsync(
+            Sensor sensor,
+            DateOnly reportDate)
+        {
+            try
+            {
+                var objectKey = $"{sensor.DeviceId}-{reportDate:yyyy-MM-dd}.json";
+                var dayJsonData = await this._objectStorageService.GetFileAsync(objectKey);
+                var sensorDayData = JsonSerializer.Deserialize<SensorDayData>(dayJsonData);
+
+                if (sensorDayData == null)
+                {
+                    return null;
+                }
+
+                return sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
+                {
+                    Timestamp = o.Timestamp,
+                    PM1 = o.PM1,
+                    PM2_5 = o.PM2_5,
+                    PM4 = o.PM4,
+                    PM10 = o.PM10,
+                    Humidity = o.Humidity,
+                    Temperature = o.Temperature
+                }).ToArray();
+            }
+            catch (Exception)
+            {
+                this._logger.LogInformation($"{nameof(GetDayReportAsync)} - Cannot get sensor data for {sensor.DeviceId} {reportDate}");
+                return null;
+            }
         }
     }
 }
