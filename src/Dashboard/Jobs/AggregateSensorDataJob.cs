@@ -26,8 +26,8 @@ namespace Dashboard.Jobs
         /// <inheritdoc/>
         public async Task Execute(IJobExecutionContext context)
         {
-            await this._dataAggregationService.AggregateAsync(context.CancellationToken);
-            this._logger.LogInformation($"{nameof(Execute)} - Job done");
+            var isSuccessful = await this._dataAggregationService.AggregateAsync(context.CancellationToken);
+            this._logger.LogInformation($"{nameof(Execute)} - Job done, isSuccessful:{isSuccessful}");
         }
     }
 }
