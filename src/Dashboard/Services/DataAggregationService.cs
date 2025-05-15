@@ -55,7 +55,7 @@ namespace Dashboard.Services
                     var succesful = await this.AggregateDateAsync(sensor, processDate);
                     if (!succesful)
                     {
-                        this._logger.LogError($"{nameof(AggregateAsync)} - {sensor.DeviceId} {processDate}");
+                        this._logger.LogInformation($"{nameof(AggregateAsync)} - Nothing to do for {sensor.DeviceId} on {processDate}");
                         failureCount++;
                         continue;
                     }
@@ -73,9 +73,12 @@ namespace Dashboard.Services
             return false;
         }
 
-        private async Task<bool> AggregateDateAsync(Sensor sensor, DateOnly date)
+        private async Task<bool> AggregateDateAsync(
+            Sensor sensor,
+            DateOnly date,
+            CancellationToken cancellationToken = default)
         {
-            var fileInfos = await this._objectStorageService.GetFileInfosAsync($"{sensor.DeviceId}-{date:yyyy-MM-dd}");
+            var fileInfos = await this._objectStorageService.GetFileInfosAsync($"{sensor.DeviceId}-{date:yyyy-MM-dd}", cancellationToken);
 
             var sensorDataKeys = new List<string>();
 
@@ -99,7 +102,7 @@ namespace Dashboard.Services
             var getFileTasks = new List<Task<UplinkMessageWebhook?>>();
             foreach (var sensorDataKey in sensorDataKeys)
             {
-                getFileTasks.Add(this.GetUplinkMessageWebhookAsync(sensorDataKey));
+                getFileTasks.Add(this.GetUplinkMessageWebhookAsync(sensorDataKey, cancellationToken));
             }
             var results = await Task.WhenAll(getFileTasks);
 
@@ -147,7 +150,7 @@ namespace Dashboard.Services
             };
 
             using var memoryStream = new MemoryStream();
-            await JsonSerializer.SerializeAsync(memoryStream, sensorDayData);
+            await JsonSerializer.SerializeAsync(memoryStream, sensorDayData, cancellationToken: cancellationToken);
 
             var key = $"{sensor.DeviceId}-{date:yyyy-MM-dd}.json";
             if (await this._objectStorageService.UploadFileAsync(key, memoryStream))
@@ -158,9 +161,11 @@ namespace Dashboard.Services
             return true;
         }
 
-        private async Task<UplinkMessageWebhook?> GetUplinkMessageWebhookAsync(string key)
+        private async Task<UplinkMessageWebhook?> GetUplinkMessageWebhookAsync(
+            string key,
+            CancellationToken cancellationToken = default)
         {
-            var fileData = await this._objectStorageService.GetFileAsync(key);
+            var fileData = await this._objectStorageService.GetFileAsync(key, cancellationToken);
 
             return JsonSerializer.Deserialize<UplinkMessageWebhook>(fileData, this._jsonSerializerOptions);
         }

@@ -20,7 +20,7 @@ namespace Dashboard.Jobs
         }
 
         /// <inheritdoc/>
-        public async Task Execute(IJobExecutionContext context)
+        public Task Execute(IJobExecutionContext context)
         {
             var sensors = this._sensorService.GetSensors();
             var inactivityDuration = TimeSpan.FromHours(1);
@@ -39,6 +39,8 @@ namespace Dashboard.Jobs
 
                 this._sensorService.SetOffline(sensor.DeviceId);
             }
+
+            return Task.CompletedTask;
         }
     }
 }

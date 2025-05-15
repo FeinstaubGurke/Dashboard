@@ -23,8 +23,8 @@ namespace Dashboard.Services
                     DeviceId = device.ids.device_id,
                     Name = device.name,
                     Description = device.description,
-                    City = device.attributes?.city,
-                    District = device.attributes?.district,
+                    City = device.attributes?.city ?? "",
+                    District = device.attributes?.district ?? "",
                     Status = "unknown"
                 });
             }
@@ -109,7 +109,7 @@ namespace Dashboard.Services
 
         public Sensor[] GetSensors()
         {
-            return [.. this._sensors.Values.OrderBy(sensor => sensor.Name)];
+            return [.. this._sensors.Values.OrderBy(sensor => sensor.City).ThenBy(sensor => sensor.District)];
         }
     }
 }
