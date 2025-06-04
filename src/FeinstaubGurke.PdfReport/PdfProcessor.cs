@@ -1,5 +1,4 @@
 ﻿using FeinstaubGurke.PdfReport.Models;
-using System.Diagnostics;
 using System.Globalization;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -31,7 +30,7 @@ namespace FeinstaubGurke.PdfReport
             Thread.CurrentThread.CurrentCulture = new CultureInfo("de-DE");
         }
 
-        /// </<inheritdoc/>
+        /// <inheritdoc/>
         public void Dispose()
         {
             this.Dispose(true);
@@ -45,17 +44,11 @@ namespace FeinstaubGurke.PdfReport
 
         public byte[] CreateReport(DeviceInfo[] deviceInfos)
         {
-            #region Cover page
-
             var coverPage = this._pdfDocumentBuilder.AddPage(PageSize.A4);
-
-            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50, font: this._headlineFont, shiftY: 200);
-            this.DrawCenterText(coverPage, "Analyse und Visualisierung der Feinstaubbelastung", fontSize: 20, font: this._defaultFont, shiftY: 160);
-            this.DrawCenterText(coverPage, "https://www.consilium.europa.eu/de/infographics/air-pollution-in-the-eu", fontSize: 10, font: this._defaultFont, shiftY: 140);
-
-            #endregion
+            this.DrawCoverPage(coverPage);
 
             var paddingX = 10;
+            var dayPerPage = 14;
 
             for (var i = 0; i < deviceInfos.Length; i++)
             {
@@ -65,115 +58,149 @@ namespace FeinstaubGurke.PdfReport
                 {
                     continue;
                 }
+                
+                var requiredPages = Math.Ceiling(deviceInfo.DailySensorRecords.Count / (double)dayPerPage);
 
-                var page = this._pdfDocumentBuilder.AddPage(PageSize.A4, false);
-                var pageTop = new PdfPoint(0, page.PageSize.Top);
-
-                #region Page Info Text
-
-                if (deviceInfo.Name != null)
+                for (var pageIndex = 0; pageIndex < requiredPages; pageIndex++)
                 {
-                    page.AddText($"{deviceInfo.City} {deviceInfo.District}", 20, pageTop.Translate(paddingX, -45), this._headlineFont);
-                    page.AddText(deviceInfo.Name, 8, pageTop.Translate(paddingX, -54), this._defaultFont);
+                    var dailySensorRecords = deviceInfo.DailySensorRecords.Skip(pageIndex * dayPerPage).Take(dayPerPage);
 
-                    page.AddText("PM2.5", 18, pageTop.Translate(paddingX, -85), this._headlineFont);
+                    var firstRecord = dailySensorRecords.First();
+                    var lastRecord = dailySensorRecords.Last();
+                    var reportingPeriod = $"{firstRecord.Key} - {lastRecord.Key}";
+
+                    var headline1 = $"{deviceInfo.City} {deviceInfo.District}";
+                    var headline2 = $"{deviceInfo.Name} | Berichtszeitraum: {reportingPeriod}";
+                    var headline3 = "PM2.5";
+
+                    var page = this._pdfDocumentBuilder.AddPage(PageSize.A4, false);
+                    var pageTop = new PdfPoint(0, page.PageSize.Top);
+
+                    var pagePadding = 10.0;
+
+                    this.DrawPageTitle(page, pageTop, headline1, headline2, headline3, paddingX);
+                    this.DrawDayAverageGraphic(page, pageTop, dailySensorRecords, pagePadding);
+                    this.DrawDayDetailGraphic(page, 240, dailySensorRecords, 200, pagePadding);
+                    this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 300, page.PageSize.Top - 50));
                 }
-
-                #endregion
-
-                var pagePadding = 10.0;
-
-                page.AddText("Tagesmittelwert", 12, pageTop.Translate(pagePadding, -120), this._headlineFont);
-
-                var dailyValues = deviceInfo.DailySensorRecords.Select(kvp => new {
-                    Date = kvp.Key,
-                    AveragePm2_5 = kvp.Value.Average(o => o.PM2_5),
-                    MinimumPm2_5 = kvp.Value.Min(o => o.PM2_5),
-                    MaximumPm2_5 = kvp.Value.Max(o => o.PM2_5)
-                }).ToArray();
-
-                var position1 = pageTop.Translate(pagePadding, -180);
-
-                var pageWidth = page.PageSize.Width - (pagePadding * 2);
-                var boxWidth = pageWidth / dailyValues.Length;
-
-                var placeholderPoint = new PdfPoint();
-
-                var boxHeight = 50;
-                var boxPadding = 10;
-
-                var fontSizeAverage = 16;
-                var fontSizeMaxMin = 7;
-                var fontSizeLabel = 4;
-
-                var dailyMinimum = "Min";
-                var dailyMaximum = "Max";
-
-                var textWidthMinimum = this.GetTextWidth(page.MeasureText(dailyMinimum, fontSizeLabel, placeholderPoint, this._headlineFont));
-                var textWidthMaximum = this.GetTextWidth(page.MeasureText(dailyMaximum, fontSizeLabel, placeholderPoint, this._headlineFont));
-
-                foreach (var dailyValue in dailyValues)
-                {
-                    if (dailyValue.AveragePm2_5 == null)
-                    {
-                        continue;
-                    }
-
-                    var color = this.GetColorFromMeasurement(dailyValue.AveragePm2_5.Value);
-
-                    var dailyAverage = $"{dailyValue.AveragePm2_5:0.00}";
-                    var dailyMinimumValue = $"{dailyValue.MinimumPm2_5:0}";
-                    var dailyMaximumValue = $"{dailyValue.MaximumPm2_5:0}";
-
-                    this.SetColor(page, color);
-                    page.DrawRectangle(position1, boxWidth, boxHeight, lineWidth: 0.1, fill: true);
-                    this.SetColor(page, DrawColor.Black);
-
-                    var textWidth = this.GetTextWidth(page.MeasureText(dailyAverage, fontSizeAverage, placeholderPoint, this._headlineFont));
-                    var paddingLeft = (boxWidth - textWidth) / 2.0;
-                    page.AddText(dailyAverage, fontSizeAverage, position1.Translate(paddingLeft, 25), this._headlineFont);
-
-                    var textWidthMinimumValue = this.GetTextWidth(page.MeasureText(dailyMinimumValue, fontSizeMaxMin, placeholderPoint, this._headlineFont));
-                    var textWidthMaximumValue = this.GetTextWidth(page.MeasureText(dailyMaximumValue, fontSizeMaxMin, placeholderPoint, this._headlineFont));
-
-                    var paddingLeft2 = boxWidth - textWidthMaximum - boxPadding;
-                    var paddingLeft3 = boxWidth - textWidthMaximumValue - boxPadding;
-
-                    this.SetColor(page, DrawColor.Gray);
-                    page.AddText(dailyMinimum, fontSizeLabel, position1.Translate(boxPadding, 6), this._defaultFont);
-                    page.AddText(dailyMaximum, fontSizeLabel, position1.Translate(paddingLeft2, 6), this._defaultFont);
-
-                    this.SetColor(page, DrawColor.Black);
-                    page.AddText(dailyMinimumValue, fontSizeMaxMin, position1.Translate(boxPadding, 11), this._defaultFont);
-                    page.AddText(dailyMaximumValue, fontSizeMaxMin, position1.Translate(paddingLeft3, 11), this._defaultFont);
-
-                    this.SetColor(page, DrawColor.LightGray);
-                    page.DrawRectangle(position1.MoveY(-15), boxWidth, 15, lineWidth: 0.1, fill: true);
-                    this.SetColor(page, DrawColor.Gray);
-                    page.AddText($"{dailyValue.Date:ddd dd.MM.yyyy}", 7, position1.Translate(5, -10), this._defaultFont);
-
-                    position1 = position1.MoveX(boxWidth);
-                }
-
-                this.DrawDayGraphic(page, 240, deviceInfo.DailySensorRecords, 200, pagePadding);
-
-                this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 300, page.PageSize.Top - 50));
             }
 
             return this._pdfDocumentBuilder.Build();
         }
 
-        private void DrawDayGraphic(
+        private void DrawCoverPage(PdfPageBuilder coverPage)
+        {
+            this.DrawCenterText(coverPage, "Feinstaubgurke", fontSize: 50, font: this._headlineFont, shiftY: 200);
+            this.DrawCenterText(coverPage, "Analyse und Visualisierung der Feinstaubbelastung", fontSize: 20, font: this._defaultFont, shiftY: 160);
+            this.DrawCenterText(coverPage, "https://www.consilium.europa.eu/de/infographics/air-pollution-in-the-eu", fontSize: 10, font: this._defaultFont, shiftY: 140);
+        }
+
+        private void DrawPageTitle(
+            PdfPageBuilder page,
+            PdfPoint pageTop,
+            string headline1,
+            string subHeadline1,
+            string headline2,
+            double paddingX)
+        {
+            page.AddText(headline1, 20, pageTop.Translate(paddingX, -45), this._headlineFont);
+            page.AddText(subHeadline1, 8, pageTop.Translate(paddingX, -57), this._defaultFont);
+
+            page.AddText(headline2, 18, pageTop.Translate(paddingX, -85), this._headlineFont);
+        }
+
+        private void DrawDayAverageGraphic(
+            PdfPageBuilder page,
+            PdfPoint pageTop,
+            IEnumerable<KeyValuePair<DateOnly, SensorRecord[]>> dailySensorRecords,
+            double pagePadding = 10)
+        {
+            page.AddText("Tagesmittelwert", 12, pageTop.Translate(pagePadding, -120), this._headlineFont);
+
+            var dailyValues = dailySensorRecords.Select(kvp => new {
+                Date = kvp.Key,
+                AveragePm2_5 = kvp.Value.Average(o => o.PM2_5),
+                MinimumPm2_5 = kvp.Value.Min(o => o.PM2_5),
+                MaximumPm2_5 = kvp.Value.Max(o => o.PM2_5)
+            }).ToArray();
+
+            var position1 = pageTop.Translate(pagePadding, -180);
+
+            var pageWidth = page.PageSize.Width - (pagePadding * 2);
+            var boxWidth = pageWidth / dailyValues.Length;
+
+            var placeholderPoint = new PdfPoint();
+
+            var boxHeight = 50;
+            var boxPadding = 10;
+
+            var fontSizeAverage = 16;
+            var fontSizeMaxMin = 7;
+            var fontSizeLabel = 4;
+
+            var dailyMinimum = "Min";
+            var dailyMaximum = "Max";
+
+            var textWidthMinimum = this.GetTextWidth(page.MeasureText(dailyMinimum, fontSizeLabel, placeholderPoint, this._headlineFont));
+            var textWidthMaximum = this.GetTextWidth(page.MeasureText(dailyMaximum, fontSizeLabel, placeholderPoint, this._headlineFont));
+
+            foreach (var dailyValue in dailyValues)
+            {
+                if (dailyValue.AveragePm2_5 == null)
+                {
+                    continue;
+                }
+
+                var color = this.GetColorFromMeasurement(dailyValue.AveragePm2_5.Value);
+
+                var dailyAverage = $"{dailyValue.AveragePm2_5:0.00}";
+                var dailyMinimumValue = $"{dailyValue.MinimumPm2_5:0}";
+                var dailyMaximumValue = $"{dailyValue.MaximumPm2_5:0}";
+
+                this.SetColor(page, color);
+                page.DrawRectangle(position1, boxWidth, boxHeight, lineWidth: 0.1, fill: true);
+                this.SetColor(page, DrawColor.Black);
+
+                var textWidth = this.GetTextWidth(page.MeasureText(dailyAverage, fontSizeAverage, placeholderPoint, this._headlineFont));
+                var paddingLeft = (boxWidth - textWidth) / 2.0;
+                page.AddText(dailyAverage, fontSizeAverage, position1.Translate(paddingLeft, 25), this._headlineFont);
+
+                var textWidthMinimumValue = this.GetTextWidth(page.MeasureText(dailyMinimumValue, fontSizeMaxMin, placeholderPoint, this._headlineFont));
+                var textWidthMaximumValue = this.GetTextWidth(page.MeasureText(dailyMaximumValue, fontSizeMaxMin, placeholderPoint, this._headlineFont));
+
+                var paddingLeft2 = boxWidth - textWidthMaximum - boxPadding;
+                var paddingLeft3 = boxWidth - textWidthMaximumValue - boxPadding;
+
+                this.SetColor(page, DrawColor.Gray);
+                page.AddText(dailyMinimum, fontSizeLabel, position1.Translate(boxPadding, 6), this._defaultFont);
+                page.AddText(dailyMaximum, fontSizeLabel, position1.Translate(paddingLeft2, 6), this._defaultFont);
+
+                this.SetColor(page, DrawColor.Black);
+                page.AddText(dailyMinimumValue, fontSizeMaxMin, position1.Translate(boxPadding, 11), this._defaultFont);
+                page.AddText(dailyMaximumValue, fontSizeMaxMin, position1.Translate(paddingLeft3, 11), this._defaultFont);
+
+                this.SetColor(page, DrawColor.LightGray);
+                page.DrawRectangle(position1.MoveY(-15), boxWidth, 15, lineWidth: 0.1, fill: true);
+                this.SetColor(page, DrawColor.Gray);
+                page.AddText($"{dailyValue.Date:ddd dd.MM.yyyy}", 7, position1.Translate(5, -10), this._defaultFont);
+
+                position1 = position1.MoveX(boxWidth);
+            }
+        }
+
+        private void DrawDayDetailGraphic(
             PdfPageBuilder page,
             int positionShiftY,
-            Dictionary<DateOnly, SensorRecord[]> dailySensorRecords,
+            IEnumerable<KeyValuePair<DateOnly, SensorRecord[]>> dailySensorRecords,
             int chartElementHeight = 200,
             double pagePadding = 10)
         {
             var font = this._defaultFont;
             var pageWidth = page.PageSize.Width - (pagePadding * 2);
 
-            var chartElementWidth = pageWidth / dailySensorRecords.Count;
+            var recordCount = dailySensorRecords.Count();
+
+            var chartElementWidth = pageWidth / recordCount;
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
@@ -182,7 +209,7 @@ namespace FeinstaubGurke.PdfReport
             var hourCount = 24;
             var blockHeight = chartElementHeight / (double)hourCount;
 
-            for (var i = 0; i < dailySensorRecords.Count; i++)
+            for (var i = 0; i < recordCount; i++)
             {
                 var keyValuePair = dailySensorRecords.ElementAt(i);
                 var sensorRecords = keyValuePair.Value;
@@ -227,8 +254,6 @@ namespace FeinstaubGurke.PdfReport
             PdfPageBuilder page,
             PdfPoint drawPosition)
         {
-            #region Draw Legend
-
             var legendInformations = new[]
             {
                 new { Text = "Sehr gut", Color = DrawColor.Green },
@@ -258,8 +283,6 @@ namespace FeinstaubGurke.PdfReport
                 var textWidth = this.GetTextWidth(letterInfos);
                 legendBasePosition = legendBasePosition.MoveX(textWidth + 20);
             }
-
-            #endregion
         }
 
         private DrawColor GetColorFromMeasurement(double measurement)

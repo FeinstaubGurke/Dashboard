@@ -48,7 +48,7 @@ namespace Dashboard.Services
             };
 
             var response = await client.DeleteObjectsAsync(request, cancellationToken);
-            return !response.DeleteErrors.Any();
+            return response.DeleteErrors.Count == 0;
         }
 
         public async Task<bool> FileExistsAsync(string key, CancellationToken cancellationToken = default)
@@ -120,7 +120,7 @@ namespace Dashboard.Services
                 }
             } while (response.IsTruncated);
 
-            return fileInfos.ToArray();
+            return [.. fileInfos];
         }
 
         public async Task<bool> UploadFileAsync(string key, Stream stream, CancellationToken cancellationToken = default)

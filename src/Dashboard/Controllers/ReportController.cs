@@ -31,13 +31,15 @@ namespace Dashboard.Controllers
         [OutputCache(Duration = 30_000, VaryByQueryKeys = ["filter"])] //6 hours
         public async Task<ActionResult<byte[]>> CreateReportAsync(
             [FromQuery] string filter,
-            CancellationToken cancellationToken)
+            [FromQuery] int lookbackPeriodInDays = 14,
+            CancellationToken cancellationToken = default)
         {
-            var sensors = this._sensorService.GetSensors();
-            var filteredSensors = sensors.Where(o => o.City.Equals(filter, StringComparison.OrdinalIgnoreCase));
-
             var startDate = DateTime.Today.AddDays(-1);
-            var reportDays = 14;
+
+            var sensors = this._sensorService.GetSensors();
+            var filteredSensors = sensors.Where(sensor => 
+                sensor.City.Equals(filter, StringComparison.OrdinalIgnoreCase) || 
+                sensor.Name.Contains(filter, StringComparison.OrdinalIgnoreCase));
 
             var items = new List<DeviceInfo>();
 
@@ -47,7 +49,7 @@ namespace Dashboard.Controllers
 
                 var reportTasks = new List<Task>();
 
-                for (var i = 0; i < reportDays; i++)
+                for (var i = 0; i < lookbackPeriodInDays; i++)
                 {
                     var processingDate = DateOnly.FromDateTime(startDate.AddDays(-i));
                     var getReportTask = this.GetDayReportAsync(sensor, processingDate, cancellationToken)
