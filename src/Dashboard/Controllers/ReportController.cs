@@ -28,7 +28,7 @@ namespace Dashboard.Controllers
         }
 
         [HttpGet]
-        [OutputCache(Duration = 30_000, VaryByQueryKeys = ["filter"])] //6 hours
+        [OutputCache(Duration = 30_000, VaryByQueryKeys = ["filter", "lookbackPeriodInDays"])] //30_000 = 6 hours
         public async Task<ActionResult<byte[]>> CreateReportAsync(
             [FromQuery] string filter,
             [FromQuery] int lookbackPeriodInDays = 14,
