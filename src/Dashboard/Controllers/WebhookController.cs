@@ -169,7 +169,7 @@ namespace Dashboard.Controllers
                 return false;
             }
 
-            this._logger.LogInformation($"{nameof(ProcessWindAsync)} - {webhook.UplinkMessage.DecodedPayload?.Decoded.WindSpeedMinimum} {webhook.UplinkMessage.DecodedPayload?.Decoded.WindSpeedMaximum}");
+            this._logger.LogInformation($"{nameof(ProcessWindAsync)} - AverageWind:{webhook.UplinkMessage.DecodedPayload.Decoded.WindSpeedAverage} MinimumWind:{webhook.UplinkMessage.DecodedPayload?.Decoded.WindSpeedMinimum} MaximumWind:{webhook.UplinkMessage.DecodedPayload?.Decoded.WindSpeedMaximum}");
 
             return true;
         }
