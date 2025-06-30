@@ -14,15 +14,19 @@ namespace Dashboard.Controllers
         private readonly SensorService _sensorService;
         private readonly JsonSerializerOptions _jsonSerializerOptions;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly string _apiKey;
 
         public WebhookController(
             ILogger<WebhookController> logger,
             SensorService sensorService,
-            IObjectStorageService objectStorageService)
+            IObjectStorageService objectStorageService,
+            IConfiguration configuration)
         {
             this._logger = logger;
             this._sensorService = sensorService;
             this._objectStorageService = objectStorageService;
+
+            this._apiKey = configuration.GetValue<string>("Webhook:ApiKey") ?? throw new Exception("Missing Api Key Configuration");
 
             this._jsonSerializerOptions = new JsonSerializerOptions
             {
@@ -46,12 +50,17 @@ namespace Dashboard.Controllers
                     return false;
                 }
 
-                var apiKey = tempAuthorizationHeader.Slice(7);
+                var receivedApiKey = tempAuthorizationHeader.Slice(7).ToString();
+
+                if (receivedApiKey.Equals(this._apiKey))
+                {
+                    this._logger.LogInformation($"{nameof(CheckApiKey)} - Api key is good");
+                    return true;
+                }
 
                 // Header gefunden, userAgent ist ein StringValues-Objekt
                 //string value = userAgent.ToString(); // oder ggf. userAgent.FirstOrDefault()
-                this._logger.LogInformation($"{nameof(CheckApiKey)} - {apiKey}");
-                return true;
+                this._logger.LogInformation($"{nameof(CheckApiKey)} - {receivedApiKey} wrong");
             }
 
             return false;
