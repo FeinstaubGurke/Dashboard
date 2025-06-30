@@ -81,7 +81,8 @@ namespace Dashboard.Controllers
         [HttpPost]
         [Route("UplinkMessage")]
         public async Task<ActionResult> UplinkMessage(
-            [FromBody] JsonElement requestBody)
+            [FromBody] JsonElement requestBody,
+            CancellationToken cancellationToken = default)
         {
             this.CheckApiKey();
 
@@ -93,26 +94,43 @@ namespace Dashboard.Controllers
             }
 
             this._logger.LogInformation(webhookBase.EndDeviceIds.ApplicationIds.ApplicationId);
+            this._logger.LogInformation($"{nameof(ProcessParticulateMatterAsync)} - {webhookBase.EndDeviceIds.DeviceId}");
 
             if (webhookBase.EndDeviceIds.ApplicationIds.ApplicationId == "feinstaubgurke")
             {
+                if (await this.ProcessParticulateMatterAsync(requestBody, cancellationToken))
+                {
+                    return StatusCode(StatusCodes.Status202Accepted);
+                }
 
-            }
-
-            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook<ParticulateMatterDecoded>>(requestBody.GetRawText(), this._jsonSerializerOptions);
-            if (webhook is null)
-            {
-                this._logger.LogInformation($"{nameof(UplinkMessage)} - Deserialize failure");
                 return StatusCode(StatusCodes.Status400BadRequest);
             }
 
-            this._logger.LogInformation($"{nameof(UplinkMessage)} - {webhook.EndDeviceIds.DeviceId} Sensormodus:{webhook.UplinkMessage.DecodedPayload.Decoded.Sensormodus} TxReason:{webhook.UplinkMessage.DecodedPayload.Decoded.TxReason}");
+            if (webhookBase.EndDeviceIds.ApplicationIds.ApplicationId == "windgurke")
+            {
+                this._logger.LogDebug("add logic");
+                return StatusCode(StatusCodes.Status202Accepted);
+            }
+
+            return StatusCode(StatusCodes.Status501NotImplemented);
+        }
+
+        private async Task<bool> ProcessParticulateMatterAsync(
+            JsonElement requestBody,
+            CancellationToken cancellationToken = default)
+        {
+            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook<ParticulateMatterDecoded>>(requestBody.GetRawText(), this._jsonSerializerOptions);
+            if (webhook is null)
+            {
+                this._logger.LogInformation($"{nameof(ProcessParticulateMatterAsync)} - Deserialize failure");
+                return false;
+            }
 
             this._sensorService.UpdateSensorData(
                 webhook.EndDeviceIds.DeviceId,
-                webhook.UplinkMessage.DecodedPayload.Decoded.TxReason,
-                webhook.UplinkMessage.DecodedPayload.Decoded.PM1,
-                webhook.UplinkMessage.DecodedPayload.Decoded.PM2_5);
+                webhook.UplinkMessage.DecodedPayload?.Decoded?.TxReason ?? "",
+                webhook.UplinkMessage.DecodedPayload?.Decoded.PM1,
+                webhook.UplinkMessage.DecodedPayload?.Decoded.PM2_5);
 
             using var memoryStream = new MemoryStream();
             using (var writer = new Utf8JsonWriter(memoryStream))
@@ -122,7 +140,7 @@ namespace Dashboard.Controllers
 
             await this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}-{DateTime.Now:yyyy-MM-dd_HH_mm}.json", memoryStream);
 
-            return StatusCode(StatusCodes.Status202Accepted);
+            return true;
         }
     }
 }
