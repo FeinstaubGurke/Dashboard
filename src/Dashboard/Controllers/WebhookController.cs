@@ -105,7 +105,7 @@ namespace Dashboard.Controllers
                 return StatusCode(StatusCodes.Status400BadRequest);
             }
 
-            this._logger.LogInformation($"{nameof(UplinkMessage)} - {webhookBase.EndDeviceIds.DeviceId}");
+            this._logger.LogInformation($"{nameof(UplinkMessage)} - {webhookBase.EndDeviceIds.DeviceId} {webhookBase.EndDeviceIds.ApplicationIds.ApplicationId}");
 
             if (webhookBase.EndDeviceIds.ApplicationIds.ApplicationId == "feinstaubgurke")
             {
