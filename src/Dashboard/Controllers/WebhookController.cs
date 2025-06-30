@@ -93,8 +93,7 @@ namespace Dashboard.Controllers
                 return StatusCode(StatusCodes.Status400BadRequest);
             }
 
-            this._logger.LogInformation(webhookBase.EndDeviceIds.ApplicationIds.ApplicationId);
-            this._logger.LogInformation($"{nameof(ProcessParticulateMatterAsync)} - {webhookBase.EndDeviceIds.DeviceId}");
+            this._logger.LogInformation($"{nameof(UplinkMessage)} - {webhookBase.EndDeviceIds.DeviceId}");
 
             if (webhookBase.EndDeviceIds.ApplicationIds.ApplicationId == "feinstaubgurke")
             {
@@ -108,8 +107,12 @@ namespace Dashboard.Controllers
 
             if (webhookBase.EndDeviceIds.ApplicationIds.ApplicationId == "windgurke")
             {
-                this._logger.LogDebug("add logic");
-                return StatusCode(StatusCodes.Status202Accepted);
+                if (await this.ProcessWindAsync(requestBody, cancellationToken))
+                {
+                    return StatusCode(StatusCodes.Status202Accepted);
+                }
+
+                return StatusCode(StatusCodes.Status400BadRequest);
             }
 
             return StatusCode(StatusCodes.Status501NotImplemented);
@@ -122,7 +125,7 @@ namespace Dashboard.Controllers
             var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook<ParticulateMatterDecoded>>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook is null)
             {
-                this._logger.LogInformation($"{nameof(ProcessParticulateMatterAsync)} - Deserialize failure");
+                this._logger.LogWarning($"{nameof(ProcessParticulateMatterAsync)} - Deserialize failure");
                 return false;
             }
 
@@ -139,6 +142,22 @@ namespace Dashboard.Controllers
             }
 
             await this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}-{DateTime.Now:yyyy-MM-dd_HH_mm}.json", memoryStream);
+
+            return true;
+        }
+
+        private async Task<bool> ProcessWindAsync(
+            JsonElement requestBody,
+            CancellationToken cancellationToken = default)
+        {
+            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook<WindDecoded>>(requestBody.GetRawText(), this._jsonSerializerOptions);
+            if (webhook is null)
+            {
+                this._logger.LogWarning($"{nameof(ProcessWindAsync)} - Deserialize failure");
+                return false;
+            }
+
+            this._logger.LogInformation($"{nameof(ProcessWindAsync)} - {webhook.UplinkMessage.DecodedPayload?.Decoded.WindSpeedMinimum} {webhook.UplinkMessage.DecodedPayload?.Decoded.WindSpeedMaximum}");
 
             return true;
         }
