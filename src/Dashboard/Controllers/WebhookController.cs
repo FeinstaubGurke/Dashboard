@@ -32,11 +32,25 @@ namespace Dashboard.Controllers
 
         private bool CheckApiKey()
         {
-            if (HttpContext.Request.Headers.TryGetValue("X-Downlink-Apikey", out var downlinkApiKey))
+            if (HttpContext.Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
             {
+                if (authorizationHeader.Count != 1)
+                {
+                    return false;
+                }
+
+                var tempAuthorizationHeader = authorizationHeader[0].AsSpan();
+
+                if (!tempAuthorizationHeader.StartsWith("Bearer "))
+                {
+                    return false;
+                }
+
+                var apiKey = tempAuthorizationHeader.Slice(7);
+
                 // Header gefunden, userAgent ist ein StringValues-Objekt
                 //string value = userAgent.ToString(); // oder ggf. userAgent.FirstOrDefault()
-                this._logger.LogInformation($"{nameof(CheckApiKey)} - {downlinkApiKey}");
+                this._logger.LogInformation($"{nameof(CheckApiKey)} - {apiKey}");
                 return true;
             }
 
