@@ -34,7 +34,7 @@ namespace Dashboard.Controllers
             };
         }
 
-        private bool CheckApiKey()
+        private bool IsValidApiKey()
         {
             if (HttpContext.Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
             {
@@ -54,13 +54,10 @@ namespace Dashboard.Controllers
 
                 if (receivedApiKey.Equals(this._apiKey))
                 {
-                    this._logger.LogInformation($"{nameof(CheckApiKey)} - Api key is good");
                     return true;
                 }
 
-                // Header gefunden, userAgent ist ein StringValues-Objekt
-                //string value = userAgent.ToString(); // oder ggf. userAgent.FirstOrDefault()
-                this._logger.LogInformation($"{nameof(CheckApiKey)} - {receivedApiKey} wrong");
+                this._logger.LogError($"{nameof(IsValidApiKey)} - Wrong Authorization {tempAuthorizationHeader}");
             }
 
             return false;
@@ -71,7 +68,10 @@ namespace Dashboard.Controllers
         public ActionResult JoinAccept(
             [FromBody] JsonElement requestBody)
         {
-            this.CheckApiKey();
+            if (!this.IsValidApiKey())
+            {
+                return StatusCode(StatusCodes.Status401Unauthorized);
+            }
 
             var webhook = JsonSerializer.Deserialize<JoinAcceptWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhook is null)
@@ -93,7 +93,10 @@ namespace Dashboard.Controllers
             [FromBody] JsonElement requestBody,
             CancellationToken cancellationToken = default)
         {
-            this.CheckApiKey();
+            if (!this.IsValidApiKey())
+            {
+                return StatusCode(StatusCodes.Status401Unauthorized);
+            }
 
             var webhookBase = JsonSerializer.Deserialize<TheThingsNetworkWebhookBase>(requestBody.GetRawText(), this._jsonSerializerOptions);
             if (webhookBase is null)
