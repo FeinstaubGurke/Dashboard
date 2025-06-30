@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Dashboard.Models.Webhooks
+namespace Dashboard.Models.Webhooks.SensorData
 {
-    public class Decoded
+    public class ParticulateMatterDecoded
     {
         public string BootloaderVersion { get; set; }
         public string FirmwareVersion { get; set; }

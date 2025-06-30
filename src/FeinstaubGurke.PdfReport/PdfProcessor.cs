@@ -146,7 +146,7 @@ namespace FeinstaubGurke.PdfReport
 
             foreach (var dailyValue in dailyValues)
             {
-                if (dailyValue.AveragePm2_5 == null)
+                if (dailyValue.AveragePm2_5 is null)
                 {
                     continue;
                 }

@@ -1,5 +1,6 @@
 ﻿using Dashboard.Models;
 using Dashboard.Models.Webhooks;
+using Dashboard.Models.Webhooks.SensorData;
 using System.Text.Json;
 
 namespace Dashboard.Services
@@ -99,15 +100,15 @@ namespace Dashboard.Services
                 return false;
             }
 
-            var getFileTasks = new List<Task<UplinkMessageWebhook?>>();
+            var getFileTasks = new List<Task<UplinkMessageWebhook<ParticulateMatterDecoded>?>>();
             foreach (var sensorDataKey in sensorDataKeys)
             {
                 getFileTasks.Add(this.GetUplinkMessageWebhookAsync(sensorDataKey, cancellationToken));
             }
             var results = await Task.WhenAll(getFileTasks);
 
-            var uplinkMessageWebhooks = new List<UplinkMessageWebhook>();
-            uplinkMessageWebhooks.AddRange(results.Where(o => o != null).Select(o => o!));
+            var uplinkMessageWebhooks = new List<UplinkMessageWebhook<ParticulateMatterDecoded>>();
+            uplinkMessageWebhooks.AddRange(results.Where(o => o is not null).Select(o => o!));
 
             var records = uplinkMessageWebhooks.Select(o => new SensorDetailRecord
             {
@@ -125,7 +126,7 @@ namespace Dashboard.Services
                 Timestamp = DateTime.TryParse(o?.UplinkMessage?.ReceivedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime receivedAt) ? receivedAt : DateTime.MinValue
             }).ToArray();
 
-            if (records == null)
+            if (records is null)
             {
                 return false;
             }
@@ -161,13 +162,13 @@ namespace Dashboard.Services
             return true;
         }
 
-        private async Task<UplinkMessageWebhook?> GetUplinkMessageWebhookAsync(
+        private async Task<UplinkMessageWebhook<ParticulateMatterDecoded>?> GetUplinkMessageWebhookAsync(
             string key,
             CancellationToken cancellationToken = default)
         {
             var fileData = await this._objectStorageService.GetFileAsync(key, cancellationToken);
 
-            return JsonSerializer.Deserialize<UplinkMessageWebhook>(fileData, this._jsonSerializerOptions);
+            return JsonSerializer.Deserialize<UplinkMessageWebhook<ParticulateMatterDecoded>>(fileData, this._jsonSerializerOptions);
         }
     }
 }

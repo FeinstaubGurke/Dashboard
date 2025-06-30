@@ -60,7 +60,7 @@ namespace Dashboard.Controllers
                                 return;
                             }
 
-                            if (task.Result == null)
+                            if (task.Result is null)
                             {
                                 return;
                             }
@@ -100,7 +100,7 @@ namespace Dashboard.Controllers
                 var dayJsonData = await this._objectStorageService.GetFileAsync(objectKey, cancellationToken);
                 var sensorDayData = JsonSerializer.Deserialize<SensorDayData>(dayJsonData);
 
-                if (sensorDayData == null)
+                if (sensorDayData is null)
                 {
                     return null;
                 }

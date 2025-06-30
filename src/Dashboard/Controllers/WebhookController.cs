@@ -1,4 +1,5 @@
 using Dashboard.Models.Webhooks;
+using Dashboard.Models.Webhooks.SensorData;
 using Dashboard.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -29,13 +30,28 @@ namespace Dashboard.Controllers
             };
         }
 
+        private bool CheckApiKey()
+        {
+            if (HttpContext.Request.Headers.TryGetValue("X-Downlink-Apikey", out var downlinkApiKey))
+            {
+                // Header gefunden, userAgent ist ein StringValues-Objekt
+                //string value = userAgent.ToString(); // oder ggf. userAgent.FirstOrDefault()
+                this._logger.LogInformation($"{nameof(CheckApiKey)} - {downlinkApiKey}");
+                return true;
+            }
+
+            return false;
+        }
+
         [HttpPost]
         [Route("JoinAccept")]
         public ActionResult JoinAccept(
             [FromBody] JsonElement requestBody)
         {
+            this.CheckApiKey();
+
             var webhook = JsonSerializer.Deserialize<JoinAcceptWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
-            if (webhook == null)
+            if (webhook is null)
             {
                 this._logger.LogInformation($"{nameof(JoinAccept)} - Deserialize failure");
                 return StatusCode(StatusCodes.Status400BadRequest);
@@ -53,8 +69,24 @@ namespace Dashboard.Controllers
         public async Task<ActionResult> UplinkMessage(
             [FromBody] JsonElement requestBody)
         {
-            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook>(requestBody.GetRawText(), this._jsonSerializerOptions);
-            if (webhook == null)
+            this.CheckApiKey();
+
+            var webhookBase = JsonSerializer.Deserialize<TheThingsNetworkWebhookBase>(requestBody.GetRawText(), this._jsonSerializerOptions);
+            if (webhookBase is null)
+            {
+                this._logger.LogInformation($"{nameof(UplinkMessage)} - Deserialize failure");
+                return StatusCode(StatusCodes.Status400BadRequest);
+            }
+
+            this._logger.LogInformation(webhookBase.EndDeviceIds.ApplicationIds.ApplicationId);
+
+            if (webhookBase.EndDeviceIds.ApplicationIds.ApplicationId == "feinstaubgurke")
+            {
+
+            }
+
+            var webhook = JsonSerializer.Deserialize<UplinkMessageWebhook<ParticulateMatterDecoded>>(requestBody.GetRawText(), this._jsonSerializerOptions);
+            if (webhook is null)
             {
                 this._logger.LogInformation($"{nameof(UplinkMessage)} - Deserialize failure");
                 return StatusCode(StatusCodes.Status400BadRequest);

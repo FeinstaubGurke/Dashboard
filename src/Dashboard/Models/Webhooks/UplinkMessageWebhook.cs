@@ -1,7 +1,7 @@
 ﻿namespace Dashboard.Models.Webhooks
 {
-    public class UplinkMessageWebhook : WebhookBase
+    public class UplinkMessageWebhook<T> : TheThingsNetworkWebhookBase
     {
-        public UplinkMessage UplinkMessage { get; set; }
+        public UplinkMessage<T> UplinkMessage { get; set; }
     }
 }

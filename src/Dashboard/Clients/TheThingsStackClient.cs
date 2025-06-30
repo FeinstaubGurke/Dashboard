@@ -26,7 +26,7 @@ namespace Dashboard.Clients
             var response = await this._httpClient.GetAsync($"/api/v3/applications/{this._applicationId}/devices?field_mask=name,description,attributes");
             var deviceResponse = await response.Content.ReadFromJsonAsync<DeviceResponse>();
 
-            if (deviceResponse == null)
+            if (deviceResponse is null)
             {
                 return [];
             }

@@ -1,7 +1,7 @@
 ﻿namespace Dashboard.Models.Webhooks
 {
-    public class DecodedPayload
+    public class DecodedPayload<T>
     {
-        public Decoded Decoded { get; set; }
+        public T Decoded { get; set; }
     }
 }
