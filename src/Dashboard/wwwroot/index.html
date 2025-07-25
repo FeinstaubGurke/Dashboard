@@ -139,10 +139,21 @@
         }
 
         /* Mobile Styles */
-        @media (max-width: 1200px) {
+        @media (min-width: 1601px) and (max-width: 1900px) {
+            .sensorbox {
+                width: 32%;
+            }
+        }
 
+        @media (min-width: 1201px) and (max-width: 1600px) {
+            .sensorbox {
+                width: 48%;
+            }
+        }
+
+        @media (max-width: 1200px) {
             .sensorcollection {
-                flex-direction: column; /* Elemente untereinander anordnen */
+                flex-direction: column;
             }
 
             .sensorbox {
