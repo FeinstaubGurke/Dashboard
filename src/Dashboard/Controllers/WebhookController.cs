@@ -153,7 +153,7 @@ namespace Dashboard.Controllers
                 requestBody.WriteTo(writer);
             }
 
-            await this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}-{DateTime.Now:yyyy-MM-dd_HH_mm}.json", memoryStream);
+            await this._objectStorageService.UploadFileAsync($"{webhook.EndDeviceIds.DeviceId}-{DateTime.UtcNow:yyyy-MM-dd_HH_mm}.json", memoryStream);
 
             return true;
         }
