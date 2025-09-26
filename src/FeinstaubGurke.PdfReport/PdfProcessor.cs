@@ -3,7 +3,6 @@ using System.Globalization;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Writer;
-using static UglyToad.PdfPig.Core.PdfSubpath;
 using static UglyToad.PdfPig.Writer.PdfDocumentBuilder;
 
 namespace FeinstaubGurke.PdfReport
@@ -43,7 +42,9 @@ namespace FeinstaubGurke.PdfReport
             this._pdfDocumentBuilder?.Dispose();
         }
 
-        public byte[] CreateReport(DeviceInfo[] deviceInfos)
+        public byte[] CreateReport(
+            DateOnly[] reportDates,
+            DeviceInfo[] deviceInfos)
         {
             var coverPage = this._pdfDocumentBuilder.AddPage(PageSize.A4);
             this.DrawCoverPage(coverPage);
@@ -59,29 +60,44 @@ namespace FeinstaubGurke.PdfReport
                 {
                     continue;
                 }
-                
-                var requiredPages = Math.Ceiling(deviceInfo.DailySensorRecords.Count / (double)dayPerPage);
+
+                //var timezone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Vienna");
+
+                var sensorRecordsWithCorrectTimezone = deviceInfo.SensorRecords.Select(sensorRecord => new SensorRecord
+                {
+                    Timestamp = sensorRecord.Timestamp.ToLocalTime(),
+                    PM1 = sensorRecord.PM1,
+                    PM2_5 = sensorRecord.PM2_5,
+                    PM4 = sensorRecord.PM4,
+                    PM10 = sensorRecord.PM10,
+                    Temperature = sensorRecord.Temperature,
+                    Humidity = sensorRecord.Humidity
+                })
+                .GroupBy(o => DateOnly.FromDateTime(o.Timestamp.Date))
+                .ToDictionary(o => o.Key, o => o.ToArray());
+
+                var requiredPages = Math.Ceiling(reportDates.Length / (double)dayPerPage);
 
                 for (var pageIndex = 0; pageIndex < requiredPages; pageIndex++)
                 {
-                    var dailySensorRecords = deviceInfo.DailySensorRecords.Skip(pageIndex * dayPerPage).Take(dayPerPage);
+                    var reportDatesOfPage = reportDates.Skip(pageIndex * dayPerPage).Take(dayPerPage).ToArray();
+                    var firstRecord = reportDatesOfPage.First();
+                    var lastRecord = reportDatesOfPage.Last();
 
-                    var firstRecord = dailySensorRecords.First();
-                    var lastRecord = dailySensorRecords.Last();
-                    var reportingPeriod = $"{firstRecord.Key} - {lastRecord.Key}";
+                    var reportingPeriod = $"{firstRecord} - {lastRecord}";
 
                     var headline1 = $"{deviceInfo.City} {deviceInfo.District}";
                     var headline2 = $"{deviceInfo.Name} | Berichtszeitraum: {reportingPeriod}";
                     var headline3 = "PM2.5";
 
-                    var page = this._pdfDocumentBuilder.AddPage(PageSize.A4, false);
+                    var page = this._pdfDocumentBuilder.AddPage(PageSize.A4, isPortrait: false);
                     var pageTop = new PdfPoint(0, page.PageSize.Top);
 
                     var pagePadding = 10.0;
 
                     this.DrawPageTitle(page, pageTop, headline1, headline2, headline3, paddingX);
-                    this.DrawDayAverageGraphic(page, pageTop, dailySensorRecords, pagePadding);
-                    this.DrawDayDetailGraphic(page, 240, dailySensorRecords, 200, pagePadding);
+                    this.DrawDayAverageGraphic(page, pageTop, reportDatesOfPage, sensorRecordsWithCorrectTimezone, pagePadding);
+                    this.DrawDayDetailGraphic(page, 240, reportDatesOfPage, sensorRecordsWithCorrectTimezone, 200, pagePadding);
                     this.DrawLegend(page, new PdfPoint(page.PageSize.Width - 300, page.PageSize.Top - 50));
                 }
             }
@@ -113,7 +129,8 @@ namespace FeinstaubGurke.PdfReport
         private void DrawDayAverageGraphic(
             PdfPageBuilder page,
             PdfPoint pageTop,
-            IEnumerable<KeyValuePair<DateOnly, SensorRecord[]>> dailySensorRecords,
+            DateOnly[] reportDates,
+            Dictionary<DateOnly, SensorRecord[]> sensorRecords,
             double pagePadding = 10)
         {
             var hourInfoWidth = 10;
@@ -122,15 +139,8 @@ namespace FeinstaubGurke.PdfReport
 
             page.AddText("Tagesmittelwert", 12, headlinePosition, this._headlineFont);
 
-            var dailyValues = dailySensorRecords.Select(kvp => new {
-                Date = kvp.Key,
-                AveragePm2_5 = kvp.Value.Average(o => o.PM2_5),
-                MinimumPm2_5 = kvp.Value.Min(o => o.PM2_5),
-                MaximumPm2_5 = kvp.Value.Max(o => o.PM2_5)
-            }).ToArray();
-
             var drawAreaWidth = page.PageSize.Width - (pagePadding * 2) - hourInfoWidth;
-            var boxWidth = drawAreaWidth / dailyValues.Length;
+            var boxWidth = drawAreaWidth / reportDates.Length;
 
             var placeholderPoint = new PdfPoint();
 
@@ -149,62 +159,74 @@ namespace FeinstaubGurke.PdfReport
 
             var boxDrawPosition = headlinePosition.Translate(hourInfoWidth, -60);
 
-            foreach (var dailyValue in dailyValues)
+            foreach (var reportDate in reportDates)
             {
-                if (dailyValue.AveragePm2_5 is null)
+                try
                 {
-                    continue;
+                    sensorRecords.TryGetValue(reportDate, out var dailySensorRecords);
+
+                    var averagePm2_5 = dailySensorRecords?.Average(o => o.PM2_5);
+                    var minimumPm2_5 = dailySensorRecords?.Min(o => o.PM2_5) ?? 0;
+                    var maximumPm2_5 = dailySensorRecords?.Max(o => o.PM2_5) ?? 0;
+
+                    var dailyAverage = $"{averagePm2_5:0.00}";
+                    var dailyMinimumValue = $"{minimumPm2_5:0}";
+                    var dailyMaximumValue = $"{maximumPm2_5:0}";
+
+                    var color = averagePm2_5 is not null ? this.GetColorFromMeasurement(averagePm2_5.Value) : DrawColor.White;
+                    this.SetColor(page, color);
+                    page.DrawRectangle(boxDrawPosition, boxWidth, boxHeight, lineWidth: 0.1, fill: true);
+                    this.SetColor(page, DrawColor.Black);
+
+                    this.SetColor(page, DrawColor.LightGray);
+                    page.DrawRectangle(boxDrawPosition.MoveY(-15), boxWidth, 15, lineWidth: 0.1, fill: true);
+                    this.SetColor(page, DrawColor.Gray);
+                    page.AddText($"{reportDate:ddd dd.MM.yyyy}", 7, boxDrawPosition.Translate(5, -10), this._defaultFont);
+
+                    if (dailySensorRecords is null)
+                    {
+                        continue;
+                    }
+
+                    var textWidth = this.GetTextWidth(page.MeasureText(dailyAverage, fontSizeAverage, placeholderPoint, this._headlineFont));
+                    var paddingLeft = (boxWidth - textWidth) / 2.0;
+                    page.AddText(dailyAverage, fontSizeAverage, boxDrawPosition.Translate(paddingLeft, 25), this._headlineFont);
+
+                    var textWidthMinimumValue = this.GetTextWidth(page.MeasureText(dailyMinimumValue, fontSizeMaxMinValues, placeholderPoint, this._headlineFont));
+                    var textWidthMaximumValue = this.GetTextWidth(page.MeasureText(dailyMaximumValue, fontSizeMaxMinValues, placeholderPoint, this._headlineFont));
+
+                    var paddingLeft2 = boxWidth - textWidthMaximum - boxPadding;
+                    var paddingLeft3 = boxWidth - textWidthMaximumValue - boxPadding;
+
+                    this.SetColor(page, DrawColor.Gray);
+                    page.AddText(dailyMinimum, fontSizeLabel, boxDrawPosition.Translate(boxPadding, 6), this._defaultFont);
+                    page.AddText(dailyMaximum, fontSizeLabel, boxDrawPosition.Translate(paddingLeft2, 6), this._defaultFont);
+
+                    this.SetColor(page, DrawColor.Black);
+                    page.AddText(dailyMinimumValue, fontSizeMaxMinValues, boxDrawPosition.Translate(boxPadding, 11), this._defaultFont);
+                    page.AddText(dailyMaximumValue, fontSizeMaxMinValues, boxDrawPosition.Translate(paddingLeft3, 11), this._defaultFont);
                 }
-
-                var color = this.GetColorFromMeasurement(dailyValue.AveragePm2_5.Value);
-
-                var dailyAverage = $"{dailyValue.AveragePm2_5:0.00}";
-                var dailyMinimumValue = $"{dailyValue.MinimumPm2_5:0}";
-                var dailyMaximumValue = $"{dailyValue.MaximumPm2_5:0}";
-
-                this.SetColor(page, color);
-                page.DrawRectangle(boxDrawPosition, boxWidth, boxHeight, lineWidth: 0.1, fill: true);
-                this.SetColor(page, DrawColor.Black);
-
-                var textWidth = this.GetTextWidth(page.MeasureText(dailyAverage, fontSizeAverage, placeholderPoint, this._headlineFont));
-                var paddingLeft = (boxWidth - textWidth) / 2.0;
-                page.AddText(dailyAverage, fontSizeAverage, boxDrawPosition.Translate(paddingLeft, 25), this._headlineFont);
-
-                var textWidthMinimumValue = this.GetTextWidth(page.MeasureText(dailyMinimumValue, fontSizeMaxMinValues, placeholderPoint, this._headlineFont));
-                var textWidthMaximumValue = this.GetTextWidth(page.MeasureText(dailyMaximumValue, fontSizeMaxMinValues, placeholderPoint, this._headlineFont));
-
-                var paddingLeft2 = boxWidth - textWidthMaximum - boxPadding;
-                var paddingLeft3 = boxWidth - textWidthMaximumValue - boxPadding;
-
-                this.SetColor(page, DrawColor.Gray);
-                page.AddText(dailyMinimum, fontSizeLabel, boxDrawPosition.Translate(boxPadding, 6), this._defaultFont);
-                page.AddText(dailyMaximum, fontSizeLabel, boxDrawPosition.Translate(paddingLeft2, 6), this._defaultFont);
-
-                this.SetColor(page, DrawColor.Black);
-                page.AddText(dailyMinimumValue, fontSizeMaxMinValues, boxDrawPosition.Translate(boxPadding, 11), this._defaultFont);
-                page.AddText(dailyMaximumValue, fontSizeMaxMinValues, boxDrawPosition.Translate(paddingLeft3, 11), this._defaultFont);
-
-                this.SetColor(page, DrawColor.LightGray);
-                page.DrawRectangle(boxDrawPosition.MoveY(-15), boxWidth, 15, lineWidth: 0.1, fill: true);
-                this.SetColor(page, DrawColor.Gray);
-                page.AddText($"{dailyValue.Date:ddd dd.MM.yyyy}", 7, boxDrawPosition.Translate(5, -10), this._defaultFont);
-
-                boxDrawPosition = boxDrawPosition.MoveX(boxWidth);
+                finally
+                {
+                    boxDrawPosition = boxDrawPosition.MoveX(boxWidth);
+                }
             }
         }
 
         private void DrawDayDetailGraphic(
             PdfPageBuilder page,
             int positionShiftY,
-            IEnumerable<KeyValuePair<DateOnly, SensorRecord[]>> dailySensorRecords,
+            DateOnly[] reportDates,
+            Dictionary<DateOnly, SensorRecord[]> dailySensorRecords,
             int drawElementHeight = 200,
             double pagePadding = 10)
         {
             var font = this._defaultFont;
             var pageWidth = page.PageSize.Width - (pagePadding * 2);
 
-            var recordCount = dailySensorRecords.Count();
+            var columnCount = reportDates.Length;
 
+            var fontSize = 5;
             var hourCount = 24;
             var hourInfoWidth = 10;
 
@@ -212,9 +234,7 @@ namespace FeinstaubGurke.PdfReport
             var hoursPerBlock = hourCount / hourBlocks;
             var spaceBetweenBlocks = 4;
 
-            var fontSize = 5;
-
-            var chartElementWidth = (pageWidth - hourInfoWidth) / recordCount;
+            var chartElementWidth = (pageWidth - hourInfoWidth) / columnCount;
 
             var drawInitPosition = new PdfPoint(pagePadding, page.PageSize.Top - positionShiftY);
             this.SetColor(page, DrawColor.Black);
@@ -236,18 +256,24 @@ namespace FeinstaubGurke.PdfReport
                 page.AddText(hour.ToString("00"), fontSize, boxPosition.Translate(2, 2.5), this._defaultFont);
             }
 
-            for (var i = 0; i < recordCount; i++)
+            for (var i = 0; i < columnCount; i++)
             {
-                var keyValuePair = dailySensorRecords.ElementAt(i);
-                var sensorRecords = keyValuePair.Value;
+                var columnDate = reportDates[i];
 
-                var dataGroupedByHour = sensorRecords
-                    .GroupBy(o => o.Timestamp.Hour)
-                    .Select(o => new
-                    {
-                        Key = o.Key,
-                        Average = o.Average(x => x.PM2_5)
-                    }).ToList();
+                dailySensorRecords.TryGetValue(columnDate, out var sensorRecords);
+
+                HourAverage[] dataGroupedByHour = [];
+
+                if (sensorRecords is not null)
+                {
+                    dataGroupedByHour = [.. sensorRecords
+                        .GroupBy(o => o.Timestamp.Hour)
+                        .Select(o => new HourAverage
+                        {
+                            Hour = o.Key,
+                            Average = o.Average(x => x.PM2_5) ?? 0
+                        })];
+                }
 
                 double positionX = hourInfoWidth + (i * chartElementWidth);
                 var position = drawInitPosition.Translate(positionX, 0);
@@ -258,28 +284,36 @@ namespace FeinstaubGurke.PdfReport
                     var hourBlock = hour / hoursPerBlock;
                     moveY = hourBlock * spaceBetweenBlocks;
 
-                    var average = dataGroupedByHour.Where(o => o.Key == hour).SingleOrDefault()?.Average ?? 0;
+                    var average = dataGroupedByHour.Where(o => o.Hour == hour).SingleOrDefault()?.Average;
                     var blockPosition = position.MoveY(-((hour + 1) * blockHeight) - moveY);
 
-                    this.SetColor(page, this.GetColorFromMeasurement(average));
-                    page.DrawRectangle(blockPosition, chartElementWidth, blockHeight, 0.1, fill: true);
-                    this.SetColor(page, DrawColor.LightGray);
+                    if (average is null)
+                    {
+                        this.SetColor(page, DrawColor.White);
+                        page.DrawRectangle(blockPosition, chartElementWidth, blockHeight, 0.1, fill: true);
+                    }
+                    else
+                    {
+                        this.SetColor(page, this.GetColorFromMeasurement(average.Value));
+                        page.DrawRectangle(blockPosition, chartElementWidth, blockHeight, 0.1, fill: true);
 
-                    var pmValue = average.ToString("0.00");
+                        var pmValue = average.Value.ToString("0.00");
 
-                    var letterInfos = page.MeasureText(pmValue, fontSize, new PdfPoint(0, 0), font);
-                    var textWidth = this.GetTextWidth(letterInfos);
+                        var letterInfos = page.MeasureText(pmValue, fontSize, new PdfPoint(0, 0), font);
+                        var textWidth = this.GetTextWidth(letterInfos);
 
-                    var paddingRight = 1;
-                    var textMoveX = chartElementWidth - textWidth - paddingRight;
-                    var textMoveY = 2.5;
+                        var paddingRight = 1;
+                        var textMoveX = chartElementWidth - textWidth - paddingRight;
+                        var textMoveY = 2.5;
 
-                    page.AddText(average.ToString("0.00"), fontSize, blockPosition.Translate(textMoveX, textMoveY), this._defaultFont);
+                        this.SetColor(page, DrawColor.LightGray);
+                        page.AddText(pmValue, fontSize, blockPosition.Translate(textMoveX, textMoveY), this._defaultFont);
+                    }
                 }
 
                 #region Draw Day Description WeekDay and Date
 
-                this.DrawDayDescriptionBox(page, keyValuePair.Key, position.Translate(0, -drawElementHeight - moveY), chartElementWidth);
+                this.DrawDayDescriptionBox(page, columnDate, position.Translate(0, -drawElementHeight - moveY), chartElementWidth);
 
                 #endregion
             }
@@ -354,6 +388,9 @@ namespace FeinstaubGurke.PdfReport
         {
             switch (color)
             {
+                case DrawColor.White:
+                    page.SetTextAndFillColor(255, 255, 255);
+                    break;
                 case DrawColor.Black:
                     page.SetTextAndFillColor(0, 0, 0);
                     break;

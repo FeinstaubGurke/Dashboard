@@ -10,6 +10,7 @@
         Yellow,
         Red,
         DarkRed,
-        Purple
+        Purple,
+        White
     }
 }

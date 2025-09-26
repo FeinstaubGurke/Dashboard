@@ -1,4 +1,5 @@
-﻿using Dashboard.Models;
+﻿using Dashboard.Helpers;
+using Dashboard.Models;
 using Dashboard.Services;
 using FeinstaubGurke.PdfReport;
 using FeinstaubGurke.PdfReport.Models;
@@ -34,7 +35,10 @@ namespace Dashboard.Controllers
             [FromQuery] int lookbackPeriodInDays = 14,
             CancellationToken cancellationToken = default)
         {
-            var startDate = DateTime.Today.AddDays(-1);
+            var reportEndDate = DateOnly.FromDateTime(DateTime.Today).AddDays(-1);
+            var reportStartDate = reportEndDate.AddDays(-(lookbackPeriodInDays - 1));
+
+            var reportDates = DateHelper.GetDateRange(reportStartDate, reportEndDate);
 
             var sensors = this._sensorService.GetSensors();
             var filteredSensors = sensors.Where(sensor => 
@@ -49,9 +53,8 @@ namespace Dashboard.Controllers
 
                 var reportTasks = new List<Task>();
 
-                for (var i = 0; i < lookbackPeriodInDays; i++)
+                foreach (var processingDate in reportDates)
                 {
-                    var processingDate = DateOnly.FromDateTime(startDate.AddDays(-i));
                     var getReportTask = this.GetDayReportAsync(sensor, processingDate, cancellationToken)
                         .ContinueWith(task =>
                         {
@@ -79,12 +82,13 @@ namespace Dashboard.Controllers
                     Name = sensor.Name,
                     City = sensor.City,
                     District = sensor.District,
-                    DailySensorRecords = dailySensorRecords.OrderBy(o => o.Key).ToDictionary()
+                    DailySensorRecords = dailySensorRecords.OrderBy(o => o.Key).ToDictionary(),
+                    SensorRecords = [.. dailySensorRecords.Values.SelectMany(o => o)]
                 });
             }
 
             using var processor = new PdfProcessor(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/pdf"));
-            var fileData = processor.CreateReport([.. items]);
+            var fileData = processor.CreateReport([.. reportDates], [.. items]);
 
             return File(fileData, "application/pdf", "report.pdf");
         }
@@ -105,7 +109,7 @@ namespace Dashboard.Controllers
                     return null;
                 }
 
-                return sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
+                return [.. sensorDayData.SensorDetailRecords.Select(o => new SensorRecord
                 {
                     Timestamp = o.Timestamp,
                     PM1 = o.PM1,
@@ -114,7 +118,7 @@ namespace Dashboard.Controllers
                     PM10 = o.PM10,
                     Humidity = o.Humidity,
                     Temperature = o.Temperature
-                }).ToArray();
+                })];
             }
             catch (Exception)
             {

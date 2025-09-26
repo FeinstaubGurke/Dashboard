@@ -8,5 +8,7 @@
         public string? District { get; set; }
 
         public Dictionary<DateOnly, SensorRecord[]> DailySensorRecords { get; set; }
+
+        public SensorRecord[] SensorRecords { get; set; } = [];
     }
 }

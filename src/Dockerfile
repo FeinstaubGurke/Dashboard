@@ -11,8 +11,9 @@ RUN dotnet publish "Dashboard/Dashboard.csproj" --os linux --configuration Relea
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 
-RUN apk update && apk add --no-cache icu-libs icu-data-full
+RUN apk update && apk add --no-cache icu-libs icu-data-full tzdata
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+ENV TZ=Europe/Vienna
 
 WORKDIR /app
 
